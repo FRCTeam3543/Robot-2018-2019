@@ -1,13 +1,14 @@
-# Robot 2019 - C4 Robotics, Arnprior District High School
+# Robot-2018-2019
+## C4 Robotics, Arnprior District High School
 
-** !!! DRAFT AND NOT TESTED YET !!! **
+** !!! DRAFT DOCUMENT !!! **
 
-This is prototype code for the 2019 robot, based in Java, same as in recent years.  It's layout follows the 2019 Visual Studio Code project format described here: https://wpilib.screenstepslive.com/s/currentCS/m/79833 .  That page also has the latest download links and installation instructions for VS Code and the WPILib plugin.  The plugin has all the java libraries for writing robot programs for the RoboRIO, the tools for deploying your code to the robot.  It _doesn't_ contain the code for the CTRE Talon SRX motor controllers, which you can access here: http://www.ctr-electronics.com/talon-srx.html .
+This repo contains much (but not all, yet) of the code from the 2017-2018 robot, but with the source layout following the 2019 Visual Studio Code project format described here: https://wpilib.screenstepslive.com/s/currentCS/m/79833 .  That page also has the latest download links and installation instructions for VS Code and the WPILib plugin.  The plugin has all the java libraries for writing robot programs for the RoboRIO, the tools for deploying your code to the robot.  It _doesn't_ contain the code for the CTRE Talon SRX motor controllers, which you can access here: http://www.ctr-electronics.com/talon-srx.html .
 
 A few key items:
 
-- our codebase this year is designed to be simple to learn.  The robot is defined in a few key files, almost all `team3543.robot` (folder `src/main/java/team3453/robot/`).
-- a few of the more rigorous Java idioms and constructs are avoided, to make things feel more like the Arduino sketch programming you're learning in the course.
+- our codebase this year is reorganized to be simpler to learn for the new coders on the team.  The robot is defined in a few key files, almost all `team3543.robot` (folder `src/main/java/team3453/robot/`).
+- a few of the more rigorous Java idioms and constructs are avoided, to make things feel more like the Arduino sketch programming you're learning in the robotics course.
 
 ## Rules for coding
 
@@ -363,11 +364,10 @@ The `Activity` interface is very simple to use, and has only one method, `boolea
 	}
 
 In Java version 8 or higher, in many cases you don't even need to
-create a separate `.java` file, you can instead use what's called a "lambda" anywhere you require an
-`Activity`.  So, for quick-n-dirty activities, you might be able to declare them in-line like this (same example as above).
-Under the hood, Java 8+ automatically creates an implementation class for you.
-The key is to factor out the lambda-activity into its own `.java` class file if you find yourself using it
-over and over again:
+create a separate `.java` file, you can instead use what's called a "_lambda_" anywhere you require an
+`Activity`.  A lambda is a function, defined inline as a method argument, that the compiler can coerce into implementing the same interface as required by the method argument. So, for quick-n-dirty activities, you might be able to declare them in-line like this (reworking the same example as above).
+
+Under the hood, Java 8+ automatically creates an implementation class for you, keeping things way simpler, especially when the alternative is to create an entire `Command` class just to run `robot.claw.open()` when a button is pressed. Factor out a `lambda` function into its own `.java` class file if you find yourself using it over and over again:
 
 	// Teleop.java
 	class Teleop {
@@ -377,9 +377,18 @@ over and over again:
 		void loop() {
 			// if the left joystick button 7 is pressed, raise the lift
 			if (robot.oi.leftJoystick.getButtonPressed(7)) {
+				// here we use an inline lambda rather than creating a separate class
+				// This syntax, explained more below, "makes" an Activity implementation
+				// from the lambda function passed, because the lambda function satisifies
+				// the Activity interfacem which needs a function that takes no args and returns
+				// a boolean.
+				// Note:() -> is how you define a lambda.  It means 'a lambda taking no arguments'
 				Activity.from(() -> {
+					// if the robot is at the top already, return "done"
 					if (robot.lift.isAtTop()) return true;
+					// otherwise, make the lift go up
 					robot.lift.goUp(robot.calibration.LIFT_MAX_SPEED);
+					// and return "not done"
 					return false;
 				}).loop();
 			}
@@ -388,12 +397,11 @@ over and over again:
 		// ...
 	}
 
-For activities that are repeated--or repeated but-for-a-small-change, create a _parameterized_ method for generating an Activity.  For an example,
-see the `driveStraight(double distance)` method of the `DriveLine` class.
+For activities that are repeated--or repeated but-for-a-small-change, create a _parameterized_ method for generating an Activity.  For an example, see the `driveStraight(double distance)` method of the `DriveLine` class.  It accepts the distance to go and returns an Activity instance that will drive the robot forward until the wheel encoders have registered that change in distance-traveled.
 
 #### Programming the Activity loop method
 
-Your block of code in you activity's `boolean loop()` method should go like this:
+Your block of code in your activity's `boolean loop()` method should go like this:
 
 1. Read a sensor of some sort (or some internal state).
 2. Compare the sensor value to the value you want to get the `error`
@@ -406,27 +414,27 @@ Your block of code in you activity's `boolean loop()` method should go like this
 #### Convenience Activity DSL
 
 We made a small _Domain-Specific Language_ (DSL) of functions to make activities easier to compose into
-more complex activities with.  To use these functions, import the DSL into your `.java` file.
+more complex activities.  To use these functions, import the DSL into your `.java` file like this:
 
-	import static team3543.robot.Activity.*; // this imports all the DSL functions into your .java file
+	import static team3543.robot.Activity.*; // this imports all the DSL functions into your `.java` class file
 
 DSL Functions:
 
-* `from(activity)' - a simple convenience wrapper for lambdas `from(robot -> { return robot.lift.isAtTop() })
-* `each(activity1, activity2, ... activityN)' - will run each activity in the list until it is done, then move on to the next one.  e.g. `Activity dropItem = each(robot.wrist.openActivity, robot.claw.openActivity)`
-* `all(activity1, activity2, ... activityN)' - will run each activity in the list _every loop_.  e.g. `all(robot.oi.openClawButtonPressed, robot.oi.closeClawButtonPressed)`.  Optionally remove completed activities: `all(activity1, activity2).removeWhenComplete()`
-* `unless(activityIsTrue, doThisActivity)' - will run the second activity, but only if the first returns `false`.  e.g. `unless(robot.oi.pauseButtonPressed, all(something, somethingElse, somethingElse))`
-* `when(activityIsTrue, doThisActivity, otherwiseDoThisActivity)' - will run the second activity if the first returns `true`, otherwise will run the third.  The third can be omitted, in which case `noop` will be performed.
+* `from(activity)` - a simple convenience wrapper for lambdas `from(() -> { return robot.lift.isAtTop() })`
+* `each(activity1, activity2, ... activityN)` - will run each activity in the list until it is done, then move on to the next one.  e.g. `Activity dropItem = each(robot.wrist.openActivity, robot.claw.openActivity)`
+* `all(activity1, activity2, ... activityN)` - will run each activity in the list _every loop_.  e.g. `all(robot.oi.openClawButtonPressed, robot.oi.closeClawButtonPressed)`.  Optionally remove completed activities: `all(activity1, activity2).removeWhenComplete()`
+* `unless(activityIsTrue, doThisActivity)` - will run the second activity, but only if the first returns `false`.  e.g. `unless(robot.oi.pauseButtonPressed, all(something, somethingElse, somethingElse))`
+* `when(activityIsTrue, doThisActivity, otherwiseDoThisActivity)` - will run the second activity if the first returns `true`, otherwise will run the third.  The third can be omitted, in which case `noop` will be performed.
 * `noop()` - does nothing (noop means "no operation") and _always returns `false`_
 * `stack()` - creates an Activity stack that you can 'push()` to.  The "last-in" activity is executed until it returns true, then it is removed from the stack and the next one is executed.  Always returns `false`;
 * `untilFirstFalse(activity1, activity2, ... activityN)` - will try to run each activity in the list _every loop_ in the order they are given, _stopping_ at the first activity that returns `false`.   Returns `true` if _all_ the activities returned true.
 * `any(activity1, activity2, ... activityN)` - runs activities in the list in order until one returns `true`.  Returns `false` if _none_ of the activities returns true.
 * `once(activity)` - runs an activity _once_ only, no matter what it's `loop()` returns.
-* `wrap(checkedUsing, wrappedUsing)` - creates an activity out of two arguments, designed to be lambdas.  The first is a "sensor" function that takes no arguments and returns a boolean, and the second is an "actuator" function that takes no arguments and returns `void`.  When the activity loops, if the check is true the `loop()` returns `true`, and if it is false then the second function is called and the loop returns `false`.  Useful with the following Java 8+ idiom: `openClaw = wrap(robot.claw::isOpen, robot.claw::open);`
-* `wrap(wrapped)` - turns a lambda/method taking no arguments into an Activity that calls the method and always returns `false`.
-* `delay(milliseconds, activity)` - creates an activity that returns `false` until at least milliseconds have passed, then returns whatever the underlying activity returns after it runs.
+* `wrap(sensorCheck, actuator)` - creates an activity out of two arguments, designed to be lambdas.  The first is a "sensor" function that takes no arguments and returns a boolean, and the second is an "actuator" function that takes no arguments and returns `void`.  When the activity loops, if the sensor check is true the `loop()` returns `true`, and if it is false then the actuator function is called and the loop returns `false`.  Useful with the following Java 8+ idiom: `openClaw = wrap(robot.claw::isOpen, robot.claw::open);`.  Here the `::` is a special operator used to denote a method within robot.claw.
+* `wrap(wrapped)` - turns a `void` lambda/method taking no arguments into an `Activity` that calls the method and always returns `false`.  `wrap(robot.lift::goUp)`
+* `delay(milliseconds, activity)` - creates an activity that returns `false` until at least milliseconds have passed, then returns whatever the underlying activity returns after it runs.  E.g. `delay(2000, wrap(robot.claw::open))`.
 
-For more help understanding what the Activity DSL functions do, check out the unit tests in test/team3543/robot/ActivityTest.java.  The classes in the test/ folder are used to test the "real" robot classes to make sure they work as expected.
+For more help understanding what the Activity DSL functions do, check out the unit tests in `src/test/java/team3543/robot/ActivityTest.java`.  The classes in the `test/` folder are used to test the "real" robot classes to make sure they work as expected.
 
 #### Adding activities to subsystems
 
@@ -445,11 +453,18 @@ subsystem and need to be parameterized:
 		}
 
 		Activity goUpActivity(double speed) {
-			return Activity.from(robot -> {
+			return Activity.from(() -> {
 				if (isAtTop()) return true;
 				goUp(speed);
 				return false;
 			});
+		}
+
+		// OR better still, use wrap().  Note we can't just
+		// pass this::goUp as the second argument, because the method requires
+		// a speed argument.
+		Activity betterGoUpActivity(double speed) {
+			return Activity.wrap(this::isAtTop, () -> { goUp(speed); });
 		}
 
 		// ...
@@ -468,7 +483,7 @@ subsystem and need to be parameterized:
 		}
 
 		void loop() {
-			activities.loop(robot);
+			activities.loop();
 		}
 		// ...
 	}
@@ -514,8 +529,8 @@ Let's practice reading method declarations:
 
 * `void loop() { ... }` - "A method called 'loop' that takes no parameters and returns nothing"
 * `int max(int x, int y) { ... }` - "A method called 'max' that requires two integers as arguments (called x and y) and returns an integer result"
-* `boolean loop(Robot robot) { ... }` - "A method called 'loop' that requires an instance of `Robot` as an argument, and returns a boolean (`true` or `false`) as a result
-* `void save(File file, byte[] data)` - "a method called 'save' that takes a File argument and an array of bytes, and returns nothing."
+* `boolean foo(Robot robot) { ... }` - "A method called 'foo' that requires an instance of `Robot` as an argument, and returns a boolean (`true` or `false`) as a result
+* `void save(File file, byte[] data)` - "a method called 'save' that requires a File argument and an array of bytes argument, and returns nothing."
 
 **Why do some class properties start with `final`?**
 

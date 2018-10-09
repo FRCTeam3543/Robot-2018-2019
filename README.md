@@ -2,9 +2,11 @@
 
 ** !!! DRAFT AND NOT TESTED YET !!! **
 
-This is prototype code for the 2019 robot, based in Java as in last years.  Java is the most widely used language in FIRST.  A few key items:
+This is prototype code for the 2019 robot, based in Java, same as in recent years.  It's layout follows the 2019 Visual Studio Code project format described here: https://wpilib.screenstepslive.com/s/currentCS/m/79833 .  That page also has the latest download links and installation instructions for VS Code and the WPILib plugin.  The plugin has all the java libraries for writing robot programs for the RoboRIO, the tools for deploying your code to the robot.  It _doesn't_ contain the code for the CTRE Talon SRX motor controllers, which you can access here: http://www.ctr-electronics.com/talon-srx.html .
 
-- this codebase is designed to be simple to learn.  The robot is defined in a few key files, almost all `team3543.robot` (folder `src/team3453/robot/`).
+A few key items:
+
+- our codebase this year is designed to be simple to learn.  The robot is defined in a few key files, almost all `team3543.robot` (folder `src/main/java/team3453/robot/`).
 - a few of the more rigorous Java idioms and constructs are avoided, to make things feel more like the Arduino sketch programming you're learning in the course.
 
 ## Rules for coding
@@ -18,7 +20,7 @@ This is prototype code for the 2019 robot, based in Java as in last years.  Java
 ### Filenames and Classes
 
 Java programs are organized into _classes_, each one in its own `.java` file with the same name
-as the class.  For example, the `DriveLine` class is in a file called `DriveLine.java` (a "class file").
+as the class.  For example, the `DriveLine` class is in a "class file" called `DriveLine.java`.
 A class is like a self-contained mini-program within the overall program that a) does a single job of some sort;
 b) has all the variables and functions it needs to do its job; and c) can be used by other classes. A class defines functions called _methods_, and variables called _properties_.  In Java, you cannot define a function or variable outside a class.
 
@@ -36,13 +38,15 @@ b) has all the variables and functions it needs to do its job; and c) can be use
 		}
 	}
 
+In Java, you use a class by making an _instance_ of it using the `new` operator: `MyProgram p = new MyProgram;`.
+
 #### package
 
 At the top of a `.java` class file, you see a _package_ statement that identifies what package ("group") the class file belongs to.  Even though the `Robot.java` file is in the `team3543/robot` folder, you still need to put `package team3543.robot;` at the top of the file.
 
 #### import
 
-At the top of a `.java` class file, you may also see a set of `import` statements.  These refer to class files in another _package_.  I  order to use a class file from a different package, you need to add an `import` statement for it.  The equivalent in an Arduino program is when you use `#include "somelibrary.h"`.   An `import some.package.*;` statement (enging in `.*`) means "import all the classes in that package".  So, in classes for Subsystems (e.g. `DriveLine`), you'll see `import` statements for classes from the WPI toolkit for sensors and actuators, like `AnalogGyro`.  A class file can't `import` a class from another package that has the exact same name as a class in its own package.  Instead, you need to need to refer to the class in the other package by its "full name":
+At the top of a `.java` class file, you may also see a set of `import` statements.  These refer to class files in another _package_.  In order to use a class file from a different package, you need to add an `import` statement for it.  The equivalent in an Arduino program is when you use `#include "somelibrary.h"`.   An `import some.package.*;` statement (enging in `.*`) means "import all the classes in that package".  So, in classes for Subsystems (e.g. `DriveLine`), you'll see `import` statements for classes from the WPI toolkit for sensors and actuators, like `AnalogGyro`.  A class file can't `import` a class from another package that has the exact same name as a class in its own package.  Instead, you need to need to refer to the class in the other package by its "full name":
 
 	// I've called my class "Joystick", so if I want to refer to the Joystick class in the WPI library I have to be specific
 	class Joystick extends edu.wpi.first.wpilibj.Joystick {
@@ -105,30 +109,26 @@ Properties are variables that belong to the class.  If you have an instance of t
 		int x = 0;
 		int y = 0;
 
-		Point(int x, int y) {
-			this.x = x; // "this" means "me"
-			this.y = y;
+		Point(int xval, int yval) {
+			x = xval; // "set my x property to the value of the xarg argument"
+			y = yval;
 		}
 	}
 
 	// somewhere else in the program ...
-	Point p = new Point(1,1); // Have I made my point?
+	Point p = new Point(1,1); // Have I made a Point? :D
 	System.out.println(p.x); // prints "1"
 
 ### Methods
 
-Inside a class, the methods (functions) can only access (see) properties of the same instance of the class.
-Instances of other classes cannot see another instance's properties or methods unless they have a reference
-to that instance.  For example, the `Robot` class cannot "see" the motor controllers in the `DriveLine`.  This is a
-Good Thing(TM).  It's the `DriveLine`'s job to manage its own motor controllers, and the `Robot`'s job to
-manage the `DriveLine`.
+Inside a class, the methods (functions) can only access (see) properties of the same instance of the class. Instances of other classes cannot see another instance's properties or methods unless they have a reference to that instance.  For example, the `Robot` class cannot "see" the motor controllers in the `DriveLine`.  This is a Good Thing(TM).  It's the `DriveLine`'s job to manage its own motor controllers, and the `Robot`'s job to manage the `DriveLine`.
 
 	// DriveLine.java
 	class DriveLine extends Subsystem {
 		...
 		AnalogGyro gyro;
 
-		DriveLine(robot) {
+		DriveLine(Robot robot) {
 			gyro = new AnalogGyro(robot.wiring.DRIVELINE_GYRO_PORT);
 			gyro.setSensitivity(robot.calibration.DRIVELINE_GYRO_SENSITIVITY);
 			...
@@ -143,21 +143,22 @@ manage the `DriveLine`.
 		Robot() {
 			super(); // this calls TimedRobot's constructor
 			driveLine = new DriveLine(this); // constructs a driveline - the instance of DriveLine is a property of the Robot
-			driveLine.calibrate();	// use the "dot" syntax to access properties
+			// note: you could also write this.driveLine = new DriveLine(this); however, the meaning
+			// is implied if there's no variable of the same name in the method body.
+			driveLine.calibrate();	// use the "dot" syntax to access properties and methods
 		}
 	}
-
 
 ## How the Robot works
 
 To try to make things easier, the robot code is organized to look and feel a bit more like Arduino sketches.
 However the robot is likely more complicated.  So, the code is organized into a set of class files that work together:
 
-* `Robot.java` - the "main" robot class as mentioned in `build.properties`.  Holds references to all the subsystems and the operator interface.
-* `Wiring.java` - contains wiring port values used by subsystems.  PUT ALL THE WIRING VALUES HERE DON'T SCATTER THEM THROUGOUT THE CODE.  Access as `robot.wiring`.
+* `Robot.java` - the "main" robot class as defined as `ROBOT_CLASS` in `build.gradle`.  The robot instance holds references to all the subsystems, wiring, calibration and geometry.  The runtime environment makes an instance of this class when it starts up the robot.  This class should take care of configuring the robot and instantiating and storing its subsystems.
+* `Wiring.java` - contains wiring port values used by subsystems.  PUT ALL THE WIRING VALUES HERE DON'T SCATTER THEM THROUGOUT THE CODE.  It's instance is accessed as `robot.wiring`.
 * `Calibration.java` - contains calibration values used by subsystems. PUT ALL CALIBRATION VALUES HERE DON'T SCATTER THEM THROUGOUT THE CODE.  Access as `robot.calibration`.
-* `Geometry.java` - contains the field and robot geometry.  PUT ALL BOT AND FIELD GEOMETRY HERE DON'T SCATTER IT THROUGHOUT THE CODE.  **Also put conversion functions and geometry calculation functions here as public static methods**.  Access as `robot.geometry` for robot geometry. Field as Geometry.FIELD_CONSTANT_NAME.
-* `Constants.java` - contains constants used elsewhere in the application BUT THAT ARE NOT WIRING OR CALIBRATION.
+* `Geometry.java` - contains the field and robot geometry.  PUT ALL BOT AND FIELD GEOMETRY HERE DON'T SCATTER IT THROUGHOUT THE CODE.  **Also put conversion functions and geometry calculation functions here as public static methods**.  Access as `robot.geometry` for robot geometry. Access constants using Geometry.FIELD_CONSTANT_NAME.
+* `Constants.java` - contains constants used elsewhere in the application BUT THAT ARE NOT WIRING OR CALIBRATION or GEOMETRY.
 * `DriveLine.java` - subsystem for the drive base used in 2016-2018 seasons (motors, encoders and gyro)
 * `Claw.java` - subsystem for the pneumatic claw used in the 2018 season, adapted for this year's code.
 * `OI.java` - describes the operator interface.  Add your custom code (dashboard buttons, etc.) in the `configure()` method.

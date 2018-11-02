@@ -23,18 +23,23 @@ import edu.wpi.first.wpilibj.SpeedController;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 
+import static team3543.robot.Utils.arrGet;
+import static team3543.robot.Utils.asBool;
+
 /**
  * Drive line subsystem
- * 
+ *
  * Contains the left and right wheels, a gyro and a differential drive.
- * 
+ *
  * These are grouped into a subsystem because all the sensors and actuators
- * work together.  
- * 
+ * work together.
+ *
  */
-public class DriveLine extends Subsystem {
-	
-	//////// Sensors 
+public class DriveLine extends Subsystem implements Recording.Recordable {
+
+    Robot robot;
+
+	//////// Sensors
     private AnalogGyro gyro = null;
     private Encoder leftWheelEncoder = null;
     private Encoder rightWheelEncoder = null;
@@ -42,52 +47,52 @@ public class DriveLine extends Subsystem {
 	//////// Actuators
     private SpeedController leftWheels = null;
     private SpeedController rightWheels = null;
-    
+
     /////// Drive
     private DifferentialDrive differentialDrive = null;
-    
+
     ////// Other variables
     private double trimDistance = 12.0;
     private double trimAngle 	= 30.0;
-    private double gyroGain		= 1/90; 
-    
+    private double gyroGain		= 1/90;
+
     public DriveLine(Robot robot) {
     	super("DriveLine");
-    	
-    	String name = getName();
-    	
+
+        String name = getName();
+
         WPI_TalonSRX leftFrontTalon = new WPI_TalonSRX(robot.wiring.DRIVELINE_LEFT_FRONT_MOTOR_PORT);
         WPI_TalonSRX leftRearTalon = new WPI_TalonSRX(robot.wiring.DRIVELINE_LEFT_REAR_MOTOR_PORT);
         WPI_TalonSRX rightFrontTalon = new WPI_TalonSRX(robot.wiring.DRIVELINE_RIGHT_FRONT_MOTOR_PORT);
         WPI_TalonSRX rightRearTalon = new WPI_TalonSRX(robot.wiring.DRIVELINE_RIGHT_REAR_MOTOR_PORT);
-                        
+
         leftFrontTalon.setNeutralMode(NeutralMode.Brake);
         rightFrontTalon.setNeutralMode(NeutralMode.Brake);
-                
+
         // right front is inverted
         rightFrontTalon.setInverted(true);
-        
+
         leftRearTalon.follow(leftFrontTalon);
         rightRearTalon.follow(rightFrontTalon);
 
         leftWheels = leftFrontTalon;
         rightWheels = rightFrontTalon;
-        
+
         differentialDrive = new DifferentialDrive(leftWheels, rightWheels);
         differentialDrive.setSafetyEnabled(true);
         differentialDrive.setSubsystem(name);
-        
+
         LiveWindow.add(differentialDrive);
-        
+
         LiveWindow.add(leftFrontTalon);
         LiveWindow.add(leftRearTalon);
         LiveWindow.add(rightFrontTalon);
         LiveWindow.add(rightRearTalon);
-        
+
         // Initialize sensors
         gyro = new AnalogGyro(robot.wiring.DRIVELINE_GYRO_PORT);
-        gyro.setSubsystem(name);               
-        gyro.setSensitivity(robot.calibration.DRIVELINE_GYRO_SENSITIVITY);        
+        gyro.setSubsystem(name);
+        gyro.setSensitivity(robot.calibration.DRIVELINE_GYRO_SENSITIVITY);
 
         leftWheelEncoder = new Encoder(robot.wiring.DRIVELINE_LEFT_ENCODER_PORT_1, robot.wiring.DRIVELINE_RIGHT_ENCODER_PORT_2, false, EncodingType.k4X);
         rightWheelEncoder = new Encoder(robot.wiring.DRIVELINE_RIGHT_ENCODER_PORT_1, robot.wiring.DRIVELINE_RIGHT_ENCODER_PORT_2, false, EncodingType.k4X);
@@ -97,22 +102,24 @@ public class DriveLine extends Subsystem {
 
         leftWheelEncoder.setPIDSourceType(PIDSourceType.kRate);
         rightWheelEncoder.setPIDSourceType(PIDSourceType.kRate);
-        
+
         leftWheelEncoder.setSubsystem(name);
         rightWheelEncoder.setSubsystem(name);
-        
+
         LiveWindow.add(gyro);
         LiveWindow.add(leftWheelEncoder);
-        LiveWindow.add(rightWheelEncoder);        
-        
+        LiveWindow.add(rightWheelEncoder);
+
         trimDistance = robot.calibration.DRIVELINE_TRIM_DISTANCE;
         trimAngle = robot.calibration.DRIVELINE_TRIM_ANGLE;
         gyroGain = robot.calibration.DRIVELINE_GYRO_GAIN;
+
+        this.robot = robot;
     }
-    
+
     @Override
     public void initDefaultCommand() {
-    	
+
     }
 
     @Override
@@ -127,24 +134,24 @@ public class DriveLine extends Subsystem {
     	leftWheelEncoder.reset();
     	rightWheelEncoder.reset();
     }
-    
+
     public void resetGyro() {
     	gyro.reset();
     }
-    
+
     /**
      * Gyro angle in degrees, relative to last resetGyro()
-     * 
+     *
      * @see resetGyro()
      * @return angle in degrees
      */
     public double getGyroAngle() {
     	return gyro.getAngle();
     }
-    
+
     /**
      * Get the left wheel encoder distance, since the last reset
-     * 
+     *
      * @return
      */
     public double getLeftEncoderValue() {
@@ -153,7 +160,7 @@ public class DriveLine extends Subsystem {
 
     /**
      * Get the right wheel encoder distance, since the last reset
-     * 
+     *
      * @return
      */
     public double getRightEncoderValue() {
@@ -162,81 +169,105 @@ public class DriveLine extends Subsystem {
 
     /**
      * Get the distance traveled since last reset, based on average of left and right encoder value
-     * 
+     *
      * @return
      */
     public double getDistanceTraveled() {
     	return (getLeftEncoderValue() + getRightEncoderValue()) / 2;
     }
-    
+
     public void resetAll() {
     	resetGyro();
     	resetEncoders();
     }
-    
+
     public void calibrate() {
     	gyro.calibrate();
     	resetAll();
     }
-    
+
     public void arcadeDrive(double magnitude, double curve, boolean squaredInputs) {
     	differentialDrive.arcadeDrive(magnitude, curve, squaredInputs);
     }
-    
+
     public void tankDrive(double left, double right, boolean squaredInputs) {
     	differentialDrive.tankDrive(left, right, squaredInputs);
     }
-    
+
     public void stop() {
+        record("stop", new double[] {});
     	differentialDrive.tankDrive(0, 0);
     }
-    
+
     public void turn(Constants.RotationDirection direction, double speed) {
     	speed *= direction == Constants.RotationDirection.COUNTERCLOCKWISE ? -1 : 1;
     	tankDrive(speed, -speed, false);
     }
-    
+
     public Activity driveStraight(final double distance, final double maxSpeed, final double tolerance) {
     	final double initialHeading = getGyroAngle();
     	final double initialDistance = getDistanceTraveled();
     	final double trimSlope = maxSpeed / trimDistance;
-    	
-    	return Activity.from(() ->{    		
+
+    	return Activity.from(() ->{
 			double angleDifference = getGyroAngle() - initialHeading;
 			double distanceDelta = getDistanceTraveled() - initialDistance;
 			double distanceError = distance - distanceDelta;
-			
+
 			// we're done if we're at the setpoint
 			if (Math.abs(distanceError) < tolerance) return true;
-			
+
 			// otherwise let's drive towards it, correcting for angle error
 			// see http://wpilib.screenstepslive.com/s/3120/m/7912/l/85772-gyros-to-control-robot-driving-direction
-			double rot = -angleDifference * gyroGain;				
+			double rot = -angleDifference * gyroGain;
 			rot = Utils.clip(rot, -1, 1);// between -1 and 1
 			arcadeDrive(Utils.clip(distanceError * trimSlope, -maxSpeed, maxSpeed), rot, false);
 
 			return false;
     	});
     }
-    
+
     public Activity turnByAngle(final double angleInDegrees, final double maxSpeed, final double tolerance) {
     	final double initialAngle = getGyroAngle();
     	final double slope = maxSpeed / trimAngle;
-    	
+
     	return Activity.from(() -> {
 			double angleError = getGyroAngle() - initialAngle;
-			
+
 			// we're done if we're at the setpoint
 			if (Math.abs(angleError) < tolerance) return true;
-			
+
 			// otherwise let's turn towards the angle
 			// see http://wpilib.screenstepslive.com/s/3120/m/7912/l/85772-gyros-to-control-robot-driving-direction
-			double speed = Utils.clip(-angleError * slope, -maxSpeed, maxSpeed);				
-			
+			double speed = Utils.clip(-angleError * slope, -maxSpeed, maxSpeed);
+
 			tankDrive(speed, -speed, false);
 			return false;
     	});
     }
-        
+
+    void record(String op, double [] args) {
+        robot.record(this, op, args);
+    }
+
+    @Override
+    public void playback(String op, double[] args) {
+        if (op.equals("arcadeDrive")) {
+            arcadeDrive(arrGet(args,0,0), arrGet(args,1,0), asBool(arrGet(args,2,0)));
+        }
+        else if (op.equals("tankDrive")) {
+            tankDrive(arrGet(args,0,0), arrGet(args,1,0), asBool(arrGet(args,2,0)));
+        }
+        else if (op.equals("stop")) {
+            this.stop();
+        }
+        else if (op.equals("calibrate")) {
+            this.calibrate();
+        }
+        else {
+            Robot.LOG.warning(String.format("Subsystem playback %s: unknown op %s", getName(), op));
+        }
+    }
+
 }
 

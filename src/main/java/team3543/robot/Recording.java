@@ -1,6 +1,5 @@
 package team3543.robot;
 
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -19,7 +18,7 @@ import java.util.Iterator;
 public class Recording {
 	enum Mode { IDLE, RECORD, PLAYBACK }
 
-	Robot robot;
+	Recordable base;
 	long startTime = System.currentTimeMillis();
 	// stores the last recording
 	RecordReel recordReel = new RecordReel();
@@ -30,8 +29,8 @@ public class Recording {
 	Map<String, Subsystem> registry = new HashMap<>();
 	private Mode mode = Mode.IDLE;
 
-	Recording(Robot robot) {
-		this.robot = robot;
+	Recording(Recordable base) {
+		this.base = base;
 	}
 
 	public void register(Subsystem subsystem) {
@@ -52,6 +51,7 @@ public class Recording {
 		}
 		reelPtr = 0;
 		mode = Mode.PLAYBACK;
+		playbackReel = recordReel.iterator();
 	}
 
 	public void stopPlayback() {
@@ -64,22 +64,30 @@ public class Recording {
 		}
 		startTime = time();
 		recordReel.clear();
+		mode = Mode.RECORD;
 	}
 
 	public void stopRecording() {
 		mode = Mode.IDLE;
 	}
 
-	public void record(Subsystem subsystem, String method, double[] args) {
+	public boolean isRecording() {
+		return mode == Mode.RECORD;
+	}
+
+	public Mode getMode() {
+		return this.mode;
+	}
+
+	public void record(String context, double[] args) {
 		if (mode == Mode.RECORD) {
-			recordReel.add(new Record(elapsed(), subsystem.getName(), method, args));
+			recordReel.add(new Record(elapsed(), context, args));
 		}
 	}
 
 	public void execute(Record record) {
 		// need java.lang.reflect
-		Subsystem subsystem = registry.get(record.subsystemName);
-		((Recordable)subsystem).playback(record.methodName, record.args);
+		this.base.playback(record.context, record.args);
 	}
 
 	public boolean loop() {
@@ -97,22 +105,28 @@ public class Recording {
 		return false;
 	}
 
+	public static interface Recorder {
+		void record(Recordable recordable, String op, double[] args);
+	}
+
 	public static interface Recordable {
 		void playback(String op, double[] args);
+		String getName();
 	}
 
 	public static class RecordReel extends ArrayList<Record >{
-
+		public static final long serialVersionUID = 0L;
 	}
 
 	public static class Record {
 		long ts;	// timetamp
-		String subsystemName;
-		String methodName;
+		String context;
 		double [] args;
 
-		public Record(long ts, String subsystemName, String methodName, double args[]) {
-
+		public Record(long ts, String context, double args[]) {
+			this.context = context;
+			this.args = args;
+			this.ts = ts;
 		}
 
 		@Override
@@ -123,22 +137,21 @@ public class Recording {
 				if (ctr++ > 0) sb.append(",");
 				sb.append(d);
 			}
-			return String.format("%l:%s.%s:%s", ts, subsystemName, methodName, sb.toString());
+			return String.format("%l:%s.%s:%s", ts, context, sb.toString());
 		}
 
 		public static Record parse(String cmd) {
 			String [] parts = cmd.split(":");
-			if (parts.length < 3) throw new IllegalArgumentException(String.format("Malformed: %s", cmd));
+			if (parts.length < 2) throw new IllegalArgumentException(String.format("Malformed: %s", cmd));
 			long ts = Long.parseLong(parts[0]);
-			String[] ssop = parts[1].split(".");
-			if (ssop.length < 2) throw new IllegalArgumentException(String.format("Malformed op: %s", cmd));
+			String ctx = parts[1];
 			String[] doubles = parts[2].split(",");
 			double [] args = new double[doubles.length];
 			int ctr = 0;
 			for (String s : doubles) {
 				args[ctr++] = Double.parseDouble(s);
 			}
-			return new Record(ts, ssop[0], ssop[1], args);
+			return new Record(ts, ctx, args);
 		}
 	}
 }

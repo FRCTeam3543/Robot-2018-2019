@@ -1,6 +1,16 @@
 package team3543.robot;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 public class Utils {
+    static ObjectMapper objectMapper = new ObjectMapper();
 
 	/**
 	 * Clips a value between the min and max
@@ -46,5 +56,26 @@ public class Utils {
 
 	public static double forBool(boolean b) {
 		return b ? 1.0 : 0.0;
+	}
+
+	/**
+	 * Returns the serialized state as UTF8-encoded string
+	 */
+	public static String toJSON(Robot.RecordedRobotState o) {
+		try {
+			return objectMapper.writeValueAsString(o);
+		} catch (JsonProcessingException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public static Robot.RecordedRobotState fromJSON(String s) {
+		try {
+			return objectMapper.readValue(s, Robot.RecordedRobotState.class);
+		} catch (JsonProcessingException e) {
+			throw new RuntimeException(e); // should not happen
+		} catch (IOException e) {
+			throw new RuntimeException(e); // also should not happen
+		}
 	}
 }

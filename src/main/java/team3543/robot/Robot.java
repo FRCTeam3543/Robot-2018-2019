@@ -1,13 +1,15 @@
 package team3543.robot;
 
-import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.Map;
+import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
+
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.command.Command;
 import edu.wpi.first.wpilibj.command.Scheduler;
 import edu.wpi.first.wpilibj.command.Subsystem;
+import edu.wpi.first.wpilibj.networktables.NetworkTable;
 import team3543.robot.DriveLine;
 
 //import team3543.base.*;
@@ -19,7 +21,7 @@ import team3543.robot.DriveLine;
  * creating this project, you must also update the build.properties file in
  * the project.
  */
-public class Robot extends TimedRobot implements Recording.Recordable {
+public class Robot extends TimedRobot {
 	public static Logger LOG = Logger.getLogger("Robot");
 
 	/////////////// Variables //////////////
@@ -35,7 +37,10 @@ public class Robot extends TimedRobot implements Recording.Recordable {
     Claw claw;
 
     // Record/playback
-    Recording recording;
+    Robot.RecordedRobotState script = new Robot.RecordedRobotState();   // manages the record/playback data
+    boolean recording;          // if on, robot should be recording
+    boolean playingBack;        // if on, robot should be playing back
+    int playbackPosition = 0;  // tracks where we are in the playback sequence
 
     // Run modes
     Autonomous autonomous;		// handles autonomous part of the game
@@ -50,12 +55,11 @@ public class Robot extends TimedRobot implements Recording.Recordable {
     	wiring = new Wiring();
     	calibration = new Calibration();
     	geometry = new Geometry(this);
-    	recording = new Recording(this);
     	driveLine = new DriveLine(this);
     	claw = new Claw(this);
     	oi = new OI(this);
-    	autonomous = new Autonomous(this);
-    	teleop = new Teleop(this);
+    	// autonomous = new Autonomous(this);
+        teleop = new Teleop(this);
 	}
 
 	/**
@@ -79,7 +83,8 @@ public class Robot extends TimedRobot implements Recording.Recordable {
      */
     @Override
     public void disabledInit() {
-    	autonomous.cancel();
+        stopPlayback();
+    	// autonomous.cancel();
     	teleop.cancel();
     	stopAll();
     }
@@ -91,7 +96,14 @@ public class Robot extends TimedRobot implements Recording.Recordable {
 
     @Override
     public void autonomousInit() {
-    	autonomous.setup();
+        autonomous.setup();
+        // TODO - get the autonomous playback we want to execute, and load it
+        initAutonomousPlayback();
+        this.startPlayback();
+    }
+
+    void initAutonomousPlayback() {
+        // TODO - I need to be filled with a script!
     }
 
     /**
@@ -99,9 +111,14 @@ public class Robot extends TimedRobot implements Recording.Recordable {
      */
     @Override
     public void autonomousPeriodic() {
-    	// this runs any scheduled commands
-        Scheduler.getInstance().run();
-    	autonomous.loop();
+        // this runs any scheduled commands
+        // perform playback, if there is a script
+        // Scheduler.getInstance().run();
+        playback();
+        autonomous.loop();
+        // note - we don't record in autonomous mode
+        // Updating subsystems only writes state.  To actually make the robot do/move, call actuate()
+        actuate();
     }
 
     @Override
@@ -112,8 +129,10 @@ public class Robot extends TimedRobot implements Recording.Recordable {
         // this line or comment it out.
     	if (autonomous != null) {
     		autonomous.cancel();
-    		autonomous = null;
-    	}
+        }
+        if (playingBack) {
+            this.stopPlayback();    // whatever we are doing, stop playback
+        }
     	teleop.setup();
     }
 
@@ -122,8 +141,22 @@ public class Robot extends TimedRobot implements Recording.Recordable {
      */
     @Override
     public void teleopPeriodic() {
-        Scheduler.getInstance().run(); // runs any scheduled commands
-    	teleop.loop();
+        // first, if we are playing back and the interrupt trigger has NOT been pressed,
+        // playback.  The RIGHT JOYSTICK TRIGGER cancels a playback in progress
+        if (oi.rightJoystick.getTriggerPressed()) {
+            this.stopPlayback();
+        }
+        // if we're playing back, do that, otherwise go through normal teleop
+        if (this.playingBack) {
+            playback();
+        }
+        else { // run the normal teleop loop and actuate
+            teleop.loop();
+            // record state, if recording
+            record();
+        }
+        // Updating subsystems only writes state.  To actually make the robot do/move, call actuate()
+        actuate();
     }
 
     /**
@@ -137,7 +170,11 @@ public class Robot extends TimedRobot implements Recording.Recordable {
      * Call this to reset the bot
      */
     void resetTheBot() {
-    	driveLine.stop();
+        pausePlayback();
+        resetRecording();
+        driveLine.stop();
+        claw.open();
+        actuate();
     }
 
     /**
@@ -147,63 +184,114 @@ public class Robot extends TimedRobot implements Recording.Recordable {
     	driveLine.calibrate();
     }
 
-
-    void initRecordables() {
-        recordableSubsystems = new HashMap<>();
-        // now add all the subsystems
-        for (Field field : getClass().getFields()) {
-            // only concerned with initialized fields that are not primitive types
-            if (field != null
-                        && !field.getType().isPrimitive()
-                        && field.getType().isAssignableFrom(Subsystem.class)
-                        && field.getType().isAssignableFrom(Recording.Recordable.class)) {
-                Recording.Recordable r;
-                try {
-                    r = (Recording.Recordable) (field.get(this));
-                    recordableSubsystems.put(r.getName(), r);
-                } catch (IllegalArgumentException e) {
-                    // Should never happen since this is self-access
-                    e.printStackTrace();
-                } catch (IllegalAccessException e) {
-                    // Should never happen since this is self-access
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    /**
-     * Record and playback
-     */
-    public void record(Recording.Recordable recordable, String op, double[] args) {
-        if (recordableSubsystems == null) { // intialize if null
-            initRecordables();
-        }
-
-        this.recording.record(String.format("%s.%s", recordable.getName(), op), args);
-    }
-
-    public void playback(String context, double[] args) {
-        // get the subsystem as a local property using reflection and then play to it
-        if (recordableSubsystems == null) { // intialize if null
-            initRecordables();
-        }
-        // now play back
-        String [] ssop = context.split(".", 2);
-        if (ssop.length > 1 && recordableSubsystems.containsKey(ssop[0])) {
-            recordableSubsystems.get(ssop[0]).playback(ssop[1], args);
-        }
-        else {
-            LOG.warning(String.format("Skipping unknown context %s", context));
-        }
-    }
-
-    Map<String, Recording.Recordable> recordableSubsystems = null;
-
     /**
      * Returns "Robot"
      */
     public String getName() {
         return "Robot";
+    }
+
+    /**
+     * Actually actuate the robot.  Called at the END of the periodics.
+     *
+     */
+    protected void actuate() {
+        // here, subsystems actuate() methods are called.
+        this.driveLine.actuate();
+        this.claw.actuate();
+    }
+
+    ///////// Record //////
+    //
+    public void resetRecording() {
+        this.pauseRecording();
+        this.script.clear();
+    }
+
+    public void pauseRecording() {
+        this.recording = false;
+    }
+
+    public void startRecording() {
+        this.recording = true;
+    }
+
+    void record() {
+        if (this.recording) {
+            this.script.add(this.getState());
+        }
+    }
+
+    //////////////////// Playback //////
+    public void setScript(RecordedRobotState script) {
+        this.script.clear();
+        this.script.addAll(script);
+    }
+
+    /**
+     * Convenience method, calls setScript and then startPlayback
+     */
+    public void startPlayback(RecordedRobotState script) {
+        setScript(script);
+        startPlayback();
+    }
+
+    /**
+     * Starts playback of the loaded script from point 0
+     */
+    public void startPlayback() {
+        this.playbackPosition = 0;
+        this.resumePlayback();
+    }
+
+    public void pausePlayback() {
+        this.playingBack = false;
+    }
+
+    public void resumePlayback() {
+        this.playingBack = true;
+    }
+
+    public void stopPlayback() {
+        this.playingBack = false;
+    }
+
+    void playback() {
+        if (this.playingBack && this.playbackPosition < this.script.size()) {
+            this.setState(this.script.get(this.playbackPosition++));
+        }
+    }
+
+    public static class State {
+        // You need a state object here for each
+        DriveLine.State driveLineState = new DriveLine.State();
+        Claw.State clawState = new Claw.State();
+    }
+
+    public static class RecordedRobotState extends ArrayList<State> {
+    }
+
+    public State getState() {
+        State state = new State();
+        // we add copies of the state
+        state.driveLineState = this.driveLine.state.copy();
+        state.clawState = this.claw.state.copy();
+        return state;
+    }
+
+    public void setState(State state) {
+        // if you add new subsystems, you need to add their states here
+        this.driveLine.state = state.driveLineState;
+        this.claw.state = state.clawState;
+    }
+
+    /**
+     * Require all subsystems in the command provided. This can be used by commands that need them all.
+     */
+    public Subsystem[] getAllSubsystems() {
+        return new Subsystem[] {
+            driveLine,
+            claw
+        };
     }
 }

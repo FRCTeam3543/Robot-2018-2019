@@ -26,6 +26,8 @@ import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import static team3543.robot.Utils.arrGet;
 import static team3543.robot.Utils.asBool;
 
+import java.io.Serializable;
+
 /**
  * Drive line subsystem
  *
@@ -35,9 +37,14 @@ import static team3543.robot.Utils.asBool;
  * work together.
  *
  */
-public class DriveLine extends Subsystem implements Recording.Recordable {
+public class DriveLine extends Subsystem implements IActuate {
 
     Robot robot;
+
+    /////// This stores the state.  All the motive routines write to this, then
+    // the actuate() method is called by the Robot at end-of-loop, and we "really"
+    // update the outputs.  This so we can record and playback
+    State state = new State();
 
 	//////// Sensors
     private AnalogGyro gyro = null;
@@ -186,16 +193,29 @@ public class DriveLine extends Subsystem implements Recording.Recordable {
     	resetAll();
     }
 
+    public void shiftHigh() {
+        state.shiftMode = ShiftMode.HIGH;
+    }
+
+    public void shiftLow() {
+        state.shiftMode = ShiftMode.LOW;
+    }
+
     public void arcadeDrive(double magnitude, double curve, boolean squaredInputs) {
-    	differentialDrive.arcadeDrive(magnitude, curve, squaredInputs);
+        state.driveMode = DriveMode.ARCADE;
+        state.magnitudeOrLeft = magnitude;
+        state.curveOrRight = curve;
+        state.squaredInputs = squaredInputs;
     }
 
     public void tankDrive(double left, double right, boolean squaredInputs) {
-    	differentialDrive.tankDrive(left, right, squaredInputs);
+        state.driveMode = DriveMode.TANK;
+        state.magnitudeOrLeft = left;
+        state.curveOrRight = right;
+        state.squaredInputs = squaredInputs;
     }
 
     public void stop() {
-        record("stop", new double[] {});
     	differentialDrive.tankDrive(0, 0);
     }
 
@@ -246,28 +266,53 @@ public class DriveLine extends Subsystem implements Recording.Recordable {
     	});
     }
 
-    void record(String op, double [] args) {
-        robot.record(this, op, args);
-    }
-
-    @Override
-    public void playback(String op, double[] args) {
-        if (op.equals("arcadeDrive")) {
-            arcadeDrive(arrGet(args,0,0), arrGet(args,1,0), asBool(arrGet(args,2,0)));
-        }
-        else if (op.equals("tankDrive")) {
-            tankDrive(arrGet(args,0,0), arrGet(args,1,0), asBool(arrGet(args,2,0)));
-        }
-        else if (op.equals("stop")) {
-            this.stop();
-        }
-        else if (op.equals("calibrate")) {
-            this.calibrate();
+    public void actuate() {
+        // if shifting, shift
+        if (state.shiftMode == ShiftMode.HIGH) {
+            // ensure shift is high
         }
         else {
-            Robot.LOG.warning(String.format("Subsystem playback %s: unknown op %s", getName(), op));
+            // ensure shift is low
+        }
+        // now drive based on mode
+        if (state.driveMode == DriveMode.ARCADE) {
+            differentialDrive.arcadeDrive(state.magnitudeOrLeft, state.curveOrRight, state.squaredInputs);
+        }
+        else {
+            differentialDrive.tankDrive(state.magnitudeOrLeft, state.curveOrRight, state.squaredInputs);
         }
     }
 
+    public static enum ShiftMode { HIGH, LOW };
+    public static enum DriveMode { TANK, ARCADE };
+
+    /**
+     * This is the state of the subsystem
+     */
+    public static class State {
+
+        ShiftMode shiftMode = ShiftMode.HIGH;
+        DriveMode driveMode = DriveMode.ARCADE;
+        double magnitudeOrLeft = 0.0;
+        double curveOrRight = 0.0;
+        boolean squaredInputs = false;
+
+        public State() {
+
+        }
+
+        public State(ShiftMode sm, DriveMode dm, double leftOrMag, double rightOrCurve, boolean sq) {
+            this();
+            this.shiftMode = sm;
+            this.driveMode = dm;
+            this.magnitudeOrLeft = leftOrMag;
+            this.curveOrRight = rightOrCurve;
+            this.squaredInputs = sq;
+        }
+
+        public State copy() {
+            return new State(this.shiftMode, this.driveMode, this.magnitudeOrLeft, this.curveOrRight, this.squaredInputs);
+        }
+    }
 }
 

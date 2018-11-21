@@ -50,6 +50,7 @@ dependencies {
     compile wpilib()
     compile ctre()
     compile navx()
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.7'
 }
 
 // Added JUnit testing

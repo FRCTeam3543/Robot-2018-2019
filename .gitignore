@@ -134,6 +134,10 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+.IDEA
+.idea
+*.iml
+
 ### Gradle ###
 .gradle
 /build/

@@ -11,29 +11,6 @@ package team3543.robot;
  * @author mk
  */
 final public class Geometry {
-	Robot robot;
-
-	Geometry(Robot robot) {
-		this.robot = robot;
-	}
-
-	/////////////////////////////////////////////////////////
-	//////////////// Bot geometry
-	final double wheelRadius	= in_to_m(6);						// m
-	////////// Add geometry methods for the bot here (that are computed relative to component positions)
-
-
-	/////////////////////////////////////////////////////////
-	//////////////// Field geometry, from 2018 Game Manual
-	// Should all be public static final double
-	public static final double FIELD_TAPE_WIDTH				= in_to_m(2);		// m
-	public static final double FIELD_AUTO_LINE_DISTANCE		= 3.05;				// m
-	public static final double FIELD_LENGTH 					= 16.46; 			// m
-	public static final double FIELD_WIDTH 					= 8.23;	 			// m
-	public static final double FIELD_CENTERLINE				= FIELD_LENGTH / 2;	// m
-
-	public static final double FIELD_NULL_TERRITORY_LENGTH 	= 1.83; 			// m
-	public static final double FIELD_NULL_TERRITORY_WIDTH 	= 2.42;				// m
 
 	// Field geometry functions should be public static final since they are "world" and independent of the bot
 

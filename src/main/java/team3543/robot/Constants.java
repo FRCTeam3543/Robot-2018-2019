@@ -1,7 +1,7 @@
 package team3543.robot;
 
 /**
- * Declare non-wiring (Wiring.java), non-calibration (Calibration.java) constants here.
+ * Declare non-config (Config.java), non-calibration (Calibration.java) constants here.
  * 
  * Note: an "enum" declares a fixed set of options.  These are better than, say, a set of 
  * named ints because when used as method parameters or class properties, you constrain

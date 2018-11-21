@@ -64,22 +64,23 @@ public class DriveLine extends Subsystem implements Actuated {
         String name = getName();
 
         WPI_TalonSRX leftFrontTalon = new WPI_TalonSRX(Config.DRIVELINE_LEFT_FRONT_MOTOR_PORT);
-        WPI_TalonSRX leftMiddleTalon = new WPI_TalonSRX(Config.DRIVELINE_LEFT_MIDDLE_MOTOR_PORT);
+//        WPI_TalonSRX leftMiddleTalon = new WPI_TalonSRX(Config.DRIVELINE_LEFT_MIDDLE_MOTOR_PORT);
         WPI_TalonSRX leftRearTalon = new WPI_TalonSRX(Config.DRIVELINE_LEFT_REAR_MOTOR_PORT);
         WPI_TalonSRX rightFrontTalon = new WPI_TalonSRX(Config.DRIVELINE_RIGHT_FRONT_MOTOR_PORT);
-        WPI_TalonSRX rightMiddleTalon = new WPI_TalonSRX(Config.DRIVELINE_RIGHT_MIDDLE_MOTOR_PORT);
+//        WPI_TalonSRX rightMiddleTalon = new WPI_TalonSRX(Config.DRIVELINE_RIGHT_MIDDLE_MOTOR_PORT);
         WPI_TalonSRX rightRearTalon = new WPI_TalonSRX(Config.DRIVELINE_RIGHT_REAR_MOTOR_PORT);
 
         leftFrontTalon.setNeutralMode(NeutralMode.Brake);
         rightFrontTalon.setNeutralMode(NeutralMode.Brake);
 
         // right front is inverted
-        rightFrontTalon.setInverted(true);
+//        rightFrontTalon.setInverted(true);
 
-        leftMiddleTalon.follow(leftFrontTalon);
+//        leftMiddleTalon.follow(leftFrontTalon);
         leftRearTalon.follow(leftFrontTalon);
 
-        rightMiddleTalon.follow(rightFrontTalon);
+//        rightMiddleTalon.follow(rightFrontTalon);
+//        rightRearTalon.setInverted(true);
         rightRearTalon.follow(rightFrontTalon);
 
         SpeedController leftWheels = leftFrontTalon;
@@ -101,7 +102,7 @@ public class DriveLine extends Subsystem implements Actuated {
         gyro.setSubsystem(name);
         gyro.setSensitivity(Config.DRIVELINE_GYRO_SENSITIVITY);
 
-        leftWheelEncoder = new Encoder(Config.DRIVELINE_LEFT_ENCODER_PORT_1, Config.DRIVELINE_RIGHT_ENCODER_PORT_2, false, EncodingType.k4X);
+        leftWheelEncoder = new Encoder(Config.DRIVELINE_LEFT_ENCODER_PORT_1, Config.DRIVELINE_LEFT_ENCODER_PORT_2, false, EncodingType.k4X);
         rightWheelEncoder = new Encoder(Config.DRIVELINE_RIGHT_ENCODER_PORT_1, Config.DRIVELINE_RIGHT_ENCODER_PORT_2, false, EncodingType.k4X);
 
         leftWheelEncoder.setDistancePerPulse(Config.DRIVELINE_ENCODER_DPP);
@@ -325,11 +326,11 @@ public class DriveLine extends Subsystem implements Actuated {
      */
     public static class State {
 
-        ShiftMode shiftMode = ShiftMode.HIGH;
-        DriveMode driveMode = DriveMode.ARCADE;
-        double magnitudeOrLeft = 0.0;
-        double curveOrRight = 0.0;
-        boolean squaredInputs = false;
+        public ShiftMode shiftMode = ShiftMode.HIGH;
+        public DriveMode driveMode = DriveMode.ARCADE;
+        public double magnitudeOrLeft = 0.0;
+        public double curveOrRight = 0.0;
+        public boolean squaredInputs = false;
 
         public State() { }
 

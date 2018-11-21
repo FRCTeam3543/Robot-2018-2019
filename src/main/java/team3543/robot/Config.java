@@ -24,21 +24,21 @@ final public class Config {
 	//////////////////// WIRING //////////////////
 	//
 	// DriveLine
-	public static final int DRIVELINE_LEFT_FRONT_MOTOR_PORT 		= 0;
-	public static final int DRIVELINE_LEFT_MIDDLE_MOTOR_PORT 		= 1;
+	public static final int DRIVELINE_LEFT_FRONT_MOTOR_PORT 		= 1;
+//	public static final int DRIVELINE_LEFT_MIDDLE_MOTOR_PORT 		= 2;
 	public static final int DRIVELINE_LEFT_REAR_MOTOR_PORT 			= 2;
 	public static final int DRIVELINE_RIGHT_FRONT_MOTOR_PORT 		= 3;
-	public static final int DRIVELINE_RIGHT_MIDDLE_MOTOR_PORT 		= 4;
-	public static final int DRIVELINE_RIGHT_REAR_MOTOR_PORT 		= 5;
-	public static final int DRIVELINE_GYRO_PORT					= 0;
+//	public static final int DRIVELINE_RIGHT_MIDDLE_MOTOR_PORT 		= 5;
+	public static final int DRIVELINE_RIGHT_REAR_MOTOR_PORT 		= 4;
+	public static final int DRIVELINE_GYRO_PORT						= 0;
 	public static final int DRIVELINE_LEFT_ENCODER_PORT_1			= 0;
 	public static final int DRIVELINE_LEFT_ENCODER_PORT_2			= 1;
-	public static final int DRIVELINE_RIGHT_ENCODER_PORT_1		= 2;
-	public static final int DRIVELINE_RIGHT_ENCODER_PORT_2		= 3;
+	public static final int DRIVELINE_RIGHT_ENCODER_PORT_1			= 2;
+	public static final int DRIVELINE_RIGHT_ENCODER_PORT_2			= 3;
 
-	public static final int COMPRESSOR_PORT = 5;
-	public static final int DRIVELINE_SOLENOID_PORT_1 = 6;
-	public static final int DRIVELINE_SOLENOID_PORT_2 = 7;
+	public static final int COMPRESSOR_PORT 						= 5;
+	public static final int DRIVELINE_SOLENOID_PORT_1 				= 6;
+	public static final int DRIVELINE_SOLENOID_PORT_2				= 7;
 
 	//////////////////// CALIBRATION ///////////////
 	//

@@ -199,7 +199,7 @@ public class Robot extends TimedRobot {
     public static class State {
         // You need a state object here for each subsystem
         // You need a state object here for each subsystem
-        DriveLine.State driveLineState = new DriveLine.State();
+        public DriveLine.State driveLineState = new DriveLine.State();
 //        Claw.State clawState = new Claw.State();
     }
 

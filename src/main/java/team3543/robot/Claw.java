@@ -2,28 +2,25 @@ package team3543.robot;
 
 import edu.wpi.first.wpilibj.command.Subsystem;
 
-import java.io.Serializable;
-
-import edu.wpi.first.wpilibj.Compressor;
-import edu.wpi.first.wpilibj.DoubleSolenoid;
-
 /**
  * This is the pneumatic claw from 2017-2018 season, adapted for this codebase
  *
- * @author mk
+ * All the "stuff" is removed since the compressor and solenoid were moved to the driveLine.
+ * This is just for illustration purposes.  This subsystem is commented out in the robot class.
+ *
  */
-public class Claw extends Subsystem implements IActuate {
+public class Claw extends Subsystem implements Actuated {
 
 	State state = new State();
 
-	DoubleSolenoid doubleSolenoid;
-	Compressor airpusher;
+	// DoubleSolenoid doubleSolenoid;
+	// Compressor airpusher;
 
-	public Claw(Robot robot) {
+	public Claw() {
 		super("Claw");
 
-		airpusher = new Compressor(robot.wiring.CLAW_COMPRESSOR_PORT);
-		doubleSolenoid = new DoubleSolenoid(robot.wiring.CLAW_SOLENOID_PORT_1, robot.wiring.CLAW_SOLENOID_PORT_2);
+		// airpusher = new Compressor(robot.config.CLAW_COMPRESSOR_PORT);
+		// doubleSolenoid = new DoubleSolenoid(robot.config.CLAW_SOLENOID_PORT_1, robot.config.CLAW_SOLENOID_PORT_2);
 	}
 
 	public void open() {
@@ -37,42 +34,43 @@ public class Claw extends Subsystem implements IActuate {
 	}
 
 	public void actuate() {
-		this.doubleSolenoid.set(isOpen() ? DoubleSolenoid.Value.kForward : DoubleSolenoid.Value.kReverse);
+		// here's where you would actually do something.  Of course nothing happens since we have no actuator
+		// this.doubleSolenoid.set(isOpen() ? DoubleSolenoid.Value.kForward : DoubleSolenoid.Value.kReverse);
 	}
 
-	public boolean getPressureSwitchValve() {
-		return airpusher.getPressureSwitchValue();
-	}
+	// public boolean getPressureSwitchValve() {
+	// 	return airpusher.getPressureSwitchValue();
+	// }
 
-	public boolean isCompressorEnabled() {
-		return airpusher.enabled();
-	}
+	// public boolean isCompressorEnabled() {
+	// 	return airpusher.enabled();
+	// }
 
 	public boolean isOpen() {
 		return state.open;
 	}
 
 	public void off() {
-		doubleSolenoid.set(DoubleSolenoid.Value.kOff);
-		state.open = false;
+		// doubleSolenoid.set(DoubleSolenoid.Value.kOff);
+		close();
 	}
 
-	public void setClosedLoopControl(boolean b) {
-		airpusher.setClosedLoopControl(b);
-	}
+	// public void setClosedLoopControl(boolean b) {
+	// 	airpusher.setClosedLoopControl(b);
+	// }
 
-	public void startCompressor() {
-		airpusher.setClosedLoopControl(true);
-		airpusher.start();
-	}
+	// public void startCompressor() {
+	// 	airpusher.setClosedLoopControl(true);
+	// 	airpusher.start();
+	// }
 
-	public void stopCompressor() {
-		airpusher.stop();
-	}
+	// public void stopCompressor() {
+	// 	airpusher.stop();
+	// }
 
 	public void reset() {
-		setClosedLoopControl(true);
-		startCompressor();
+		// setClosedLoopControl(true);
+		// startCompressor();
 		close();
 	}
 

@@ -1,6 +1,6 @@
 package team3543.robot;
 
 
-interface IActuate {
+interface Actuated {
     void actuate();
 }

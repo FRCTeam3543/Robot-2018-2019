@@ -11,18 +11,27 @@
 
 package team3543.robot;
 
+import edu.wpi.first.networktables.*;
+import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.buttons.JoystickButton;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj.command.Command;
 
 /**
  * This class is the glue that binds the controls on the physical operator
- * interface to the commands and command groups that allow control of the robot.
+ * interface to the actions of the robot.
+ *
  */
 public class OI {
-	
-	Robot robot;
-		
+    public static final String NETWORK_TABLE = "recording";
+    public static final String RECORD_SAVE_CHANNEL = "saveFromBot";
+    public static final String RECORD_LOAD_CHANNEL = "loadToBot";
+
+	final Robot robot;    // we need a reference to the robot
+
+	DriveLine.DriveMode driveMode = DriveLine.DriveMode.ARCADE;
+
+	public static final String SCRIPT_CHOOSER = "Playback RobotScript";
+
 	public static final int DEFAULT_LEFT_JOYSTICK_PORT	= 0;
 	public static final int DEFAULT_RIGHT_JOYSTICK_PORT	= 1;
 	
@@ -33,13 +42,28 @@ public class OI {
     public Joystick leftJoystick;
     public Joystick rightJoystick;
 
+//    final NetworkTable networkTable;
+
+	Recordings.RecordingChooser recordingChooser;
+
     public OI(Robot robot) {
     	this.robot = robot;
-    	initJoysticks(DEFAULT_LEFT_JOYSTICK_PORT, DEFAULT_RIGHT_JOYSTICK_PORT);    	
+//    	networkTable = NetworkTableInstance.getDefault().getTable(NETWORK_TABLE);
+    	initJoysticks(DEFAULT_LEFT_JOYSTICK_PORT, DEFAULT_RIGHT_JOYSTICK_PORT);
+    	recordingChooser = Recordings.chooser();
     }
     
     public void configure() {
-    	// put OI configuration here.  This is called during robotInit    	
+    	// put OI configuration here.  This is called during robotInit
+		// here, we want to create a chooser for autonomous mode
+		SmartDashboard.putData(SCRIPT_CHOOSER, Recordings.chooser());
+
+		// Let's also listen for a change on the RECORD_LOAD_CHANNEL, so we can load
+        // the playback script from elsewhere
+//        networkTable.addEntryListener(RECORD_LOAD_CHANNEL, (table, key, entry, value, flags) -> {
+//            Robot.LOG.info("Loading new script");
+//            robot.recorder.setScript(RobotScript.fromJSON(value.getString()));
+//        }, EntryListenerFlags.kNew | EntryListenerFlags.kUpdate);
     }
     
     public OI initJoysticks(int left, int right) {
@@ -55,53 +79,158 @@ public class OI {
     public Joystick getRightJoystick() {
         return rightJoystick;
     }
-    
-    public static class Joystick extends edu.wpi.first.wpilibj.Joystick {
-    	Joystick(int port) {
-    		super(port);
-    	}
-    	
-    	public JoystickButton button(int num) {
-    		return new JoystickButton(this, num);
-    	}
-    	
-    	public Activity buttonPressed(int num) {
-    		return Activity.from( () -> {
-				return getRawButtonPressed(num);
-    		});
-    	}
-    	
-    	public Activity buttonReleased(int num) {
-    		return Activity.from(() -> {
-				return getRawButtonReleased(num);
-    		});
-    	}
-    	
-    	public Activity triggerPressed() {
-    		return this.buttonPressed(TRIGGER_BUTTON);
-    	}
-    	
-    	public Activity triggerReleased() {
-    		return this.buttonReleased(TRIGGER_BUTTON);
-    	}
-    	
-    }
-        
-    //////////// Dashboard stuff //////////
-    void addDashboardActivity(final String label, final Activity activity) {
-    	SmartDashboard.putData(label, new Command() {
-    		boolean done = false;
-    		
-    		@Override
-    		public void execute() {
-    			done = activity.loop();
-    		}
-    		
-			@Override
-			protected boolean isFinished() {
-				return done;
-			}    		
-    	});
-    }
+
+	/**
+	 * Code that runs every loop, just like in Arduino.  Read the inputs from the operator
+	 * interface and then control the bot.
+	 *
+	 */
+	void loop() {
+
+		// IF we push the right joystick thumb button, STOP all teleop
+		if (robot.oi.rightJoystick.getTriggerPressed()) {
+			robot.stopAll();
+			// and don't do anything else!
+			return;
+		}
+
+		// RECORD
+		controlRecord();
+
+		// PLAYBACK
+		controlPlayback();
+
+		// If the robot is NOT playing back a recording, do the other stuff based on inputs
+		if (robot.recorder.playingBack) {
+			robot.recorder.playback();
+		}
+		else {
+			// TODO - add other controls here
+			// controlClaw()
+
+			// drive the bot manually
+			drive();
+		}
+	}
+
+	void controlRecord() {
+		// If we press the reset button reset recording
+		if (robot.oi.leftJoystick.getRawButtonReleased(Config.RESET_RECORD_BUTTON)) {
+			robot.recorder.stopRecording();
+			robot.recorder.resetRecording();
+		}
+		// if we press the record button, ensure we are recoeding
+		if (robot.oi.leftJoystick.getRawButtonPressed(Config.RECORD_BUTTON)) {
+			robot.recorder.startRecording();
+		}
+		// if we release the record button, pause recording
+		else if (robot.oi.leftJoystick.getRawButtonReleased(Config.RECORD_BUTTON)) {
+			robot.recorder.stopRecording();
+			robot.recorder.dumpRecording(); // will write it to the console
+            // TODO - will this be too much data for a String field?  Can we make the text box big?
+            SmartDashboard.putString(RECORD_SAVE_CHANNEL, robot.recorder.getScript().toJSON());
+		}
+	}
+
+	void controlDriveMode() {
+		// if we click the trigger on the left joystick switch drive mode
+		if (robot.oi.leftJoystick.getTriggerReleased()) {
+			switchDriveMode();
+		}
+	}
+
+	void controlShifter() {
+		// if we click on the shifter buttons on the left stick, shift up/down
+		if (robot.oi.leftJoystick.getRawButtonPressed(Config.SHIFT_HIGH_BUTTON)) {
+			robot.driveLine.shiftHigh();
+		}
+		else if (robot.oi.leftJoystick.getRawButtonPressed(Config.SHIFT_LOW_BUTTON)) {
+			robot.driveLine.shiftLow();
+		}
+	}
+
+	void controlPlayback() {
+		// If we select a new playback script on the smart dashboard, stop playback and
+		// load it into the bot
+
+		// If we select the playback button, load the selected script and start playback
+		if (robot.oi.leftJoystick.getRawButtonPressed(Config.RESET_PLAYBACK_BUTTON)) {
+			robot.recorder.stopPlayback();
+			robot.recorder.resetPlayback();
+		}
+		// if we hit the load playback button, load it
+		if (leftJoystick.getRawButtonReleased(Config.LOAD_PLAYBACK_BUTTON)) {
+			robot.recorder.setScript(RobotScript.EMPTY);
+			Recordings.ScriptSource scriptSource = recordingChooser.getSelected();
+			if (scriptSource != null) {
+				robot.recorder.setScript(scriptSource.getScript());
+			}
+		}
+		if (robot.oi.leftJoystick.getRawButtonPressed(Config.PLAYBACK_BUTTON)) {
+			robot.recorder.startPlayback();
+		}
+		else if (robot.oi.leftJoystick.getRawButtonReleased(Config.PLAYBACK_BUTTON)) {
+			robot.recorder.stopPlayback();
+		}
+	}
+
+	/**
+	 * Drive the robot
+	 *
+	 * Delegates to tankDrive or arcadeDrive, depending on the setting of driveMode
+	 */
+	void drive() {
+		// control the drive mode
+		controlDriveMode();
+
+		// control the shifter
+		controlShifter();
+
+		SmartDashboard.putString("Drive Mode", driveMode.toString());
+		if (driveMode == DriveLine.DriveMode.TANK) {
+			tankDrive();
+		}
+		else {
+			arcadeDrive();
+		}
+	}
+
+	/**
+	 * Implements arcade drive using the right joystick
+	 */
+	void arcadeDrive() {
+		robot.driveLine.arcadeDrive(
+				robot.oi.rightJoystick.getY(),
+				robot.oi.rightJoystick.getX(),
+				true);
+	}
+
+	/**
+	 * Implements tank drive using the right joystick
+	 */
+	void tankDrive() {
+		robot.driveLine.tankDrive(
+				robot.oi.leftJoystick.getY(),
+				robot.oi.rightJoystick.getY(),
+				true
+		);
+	}
+
+	/**
+	 * Switch drive mode between TANK and ARCADE
+	 */
+	void switchDriveMode() {
+		if (driveMode == DriveLine.DriveMode.ARCADE) {
+			driveMode = DriveLine.DriveMode.TANK;
+		} else {
+			driveMode = DriveLine.DriveMode.ARCADE;
+		}
+	}
+
+	public RobotScript getAutonomousScript() {
+		// TODO - create something
+		return new RobotScript();
+	}
+
 }
 

@@ -9,8 +9,6 @@
 // it from being updated in the future.
 package team3543.robot;
 
-import team3543.robot.Constants;
-
 import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 
@@ -22,9 +20,7 @@ import edu.wpi.first.wpilibj.PIDSourceType;
 import edu.wpi.first.wpilibj.SpeedController;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
-
-import static team3543.robot.Utils.arrGet;
-import static team3543.robot.Utils.asBool;
+import edu.wpi.first.wpilibj.DoubleSolenoid;
 
 import java.io.Serializable;
 
@@ -37,25 +33,24 @@ import java.io.Serializable;
  * work together.
  *
  */
-public class DriveLine extends Subsystem implements IActuate {
+public class DriveLine extends Subsystem implements Actuated {
 
     Robot robot;
 
     /////// This stores the state.  All the motive routines write to this, then
     // the actuate() method is called by the Robot at end-of-loop, and we "really"
-    // update the outputs.  This so we can record and playback
+    // update the outputs.  This so we can record and playback.
     State state = new State();
 
-	//////// Sensors
+	//////// Sensors //////////
     private AnalogGyro gyro = null;
     private Encoder leftWheelEncoder = null;
     private Encoder rightWheelEncoder = null;
 
-	//////// Actuators
-    private SpeedController leftWheels = null;
-    private SpeedController rightWheels = null;
+    private DoubleSolenoid doubleSolenoid;
+//	private Compressor airpusher;  // should not need this - doubleSolenoid will start the compressor
 
-    /////// Drive
+	//////// Actuators ////////////
     private DifferentialDrive differentialDrive = null;
 
     ////// Other variables
@@ -63,15 +58,15 @@ public class DriveLine extends Subsystem implements IActuate {
     private double trimAngle 	= 30.0;
     private double gyroGain		= 1/90;
 
-    public DriveLine(Robot robot) {
+    public DriveLine() {
     	super("DriveLine");
 
         String name = getName();
 
-        WPI_TalonSRX leftFrontTalon = new WPI_TalonSRX(robot.wiring.DRIVELINE_LEFT_FRONT_MOTOR_PORT);
-        WPI_TalonSRX leftRearTalon = new WPI_TalonSRX(robot.wiring.DRIVELINE_LEFT_REAR_MOTOR_PORT);
-        WPI_TalonSRX rightFrontTalon = new WPI_TalonSRX(robot.wiring.DRIVELINE_RIGHT_FRONT_MOTOR_PORT);
-        WPI_TalonSRX rightRearTalon = new WPI_TalonSRX(robot.wiring.DRIVELINE_RIGHT_REAR_MOTOR_PORT);
+        WPI_TalonSRX leftFrontTalon = new WPI_TalonSRX(Config.DRIVELINE_LEFT_FRONT_MOTOR_PORT);
+        WPI_TalonSRX leftRearTalon = new WPI_TalonSRX(Config.DRIVELINE_LEFT_REAR_MOTOR_PORT);
+        WPI_TalonSRX rightFrontTalon = new WPI_TalonSRX(Config.DRIVELINE_RIGHT_FRONT_MOTOR_PORT);
+        WPI_TalonSRX rightRearTalon = new WPI_TalonSRX(Config.DRIVELINE_RIGHT_REAR_MOTOR_PORT);
 
         leftFrontTalon.setNeutralMode(NeutralMode.Brake);
         rightFrontTalon.setNeutralMode(NeutralMode.Brake);
@@ -82,8 +77,8 @@ public class DriveLine extends Subsystem implements IActuate {
         leftRearTalon.follow(leftFrontTalon);
         rightRearTalon.follow(rightFrontTalon);
 
-        leftWheels = leftFrontTalon;
-        rightWheels = rightFrontTalon;
+        SpeedController leftWheels = leftFrontTalon;
+        SpeedController rightWheels = rightFrontTalon;
 
         differentialDrive = new DifferentialDrive(leftWheels, rightWheels);
         differentialDrive.setSafetyEnabled(true);
@@ -97,15 +92,15 @@ public class DriveLine extends Subsystem implements IActuate {
         LiveWindow.add(rightRearTalon);
 
         // Initialize sensors
-        gyro = new AnalogGyro(robot.wiring.DRIVELINE_GYRO_PORT);
+        gyro = new AnalogGyro(Config.DRIVELINE_GYRO_PORT);
         gyro.setSubsystem(name);
-        gyro.setSensitivity(robot.calibration.DRIVELINE_GYRO_SENSITIVITY);
+        gyro.setSensitivity(Config.DRIVELINE_GYRO_SENSITIVITY);
 
-        leftWheelEncoder = new Encoder(robot.wiring.DRIVELINE_LEFT_ENCODER_PORT_1, robot.wiring.DRIVELINE_RIGHT_ENCODER_PORT_2, false, EncodingType.k4X);
-        rightWheelEncoder = new Encoder(robot.wiring.DRIVELINE_RIGHT_ENCODER_PORT_1, robot.wiring.DRIVELINE_RIGHT_ENCODER_PORT_2, false, EncodingType.k4X);
+        leftWheelEncoder = new Encoder(Config.DRIVELINE_LEFT_ENCODER_PORT_1, Config.DRIVELINE_RIGHT_ENCODER_PORT_2, false, EncodingType.k4X);
+        rightWheelEncoder = new Encoder(Config.DRIVELINE_RIGHT_ENCODER_PORT_1, Config.DRIVELINE_RIGHT_ENCODER_PORT_2, false, EncodingType.k4X);
 
-        leftWheelEncoder.setDistancePerPulse(robot.calibration.DRIVELINE_ENCODER_DPP);
-        rightWheelEncoder.setDistancePerPulse(robot.calibration.DRIVELINE_ENCODER_DPP);
+        leftWheelEncoder.setDistancePerPulse(Config.DRIVELINE_ENCODER_DPP);
+        rightWheelEncoder.setDistancePerPulse(Config.DRIVELINE_ENCODER_DPP);
 
         leftWheelEncoder.setPIDSourceType(PIDSourceType.kRate);
         rightWheelEncoder.setPIDSourceType(PIDSourceType.kRate);
@@ -117,12 +112,24 @@ public class DriveLine extends Subsystem implements IActuate {
         LiveWindow.add(leftWheelEncoder);
         LiveWindow.add(rightWheelEncoder);
 
-        trimDistance = robot.calibration.DRIVELINE_TRIM_DISTANCE;
-        trimAngle = robot.calibration.DRIVELINE_TRIM_ANGLE;
-        gyroGain = robot.calibration.DRIVELINE_GYRO_GAIN;
+        trimDistance = Config.DRIVELINE_TRIM_DISTANCE;
+        trimAngle = Config.DRIVELINE_TRIM_ANGLE;
+        gyroGain = Config.DRIVELINE_GYRO_GAIN;
 
-        this.robot = robot;
+//		airpusher = new Compressor(Config.COMPRESSOR_PORT);
+		doubleSolenoid = new DoubleSolenoid(Config.DRIVELINE_SOLENOID_PORT_1, Config.DRIVELINE_SOLENOID_PORT_2);
+
     }
+
+//    public void startCompressor() {
+//		airpusher.setClosedLoopControl(true);
+//		airpusher.start();
+//	}
+//
+//	public void stopCompressor() {
+//		airpusher.stop();
+//	}
+
 
     @Override
     public void initDefaultCommand() {
@@ -145,6 +152,17 @@ public class DriveLine extends Subsystem implements IActuate {
     public void resetGyro() {
     	gyro.reset();
     }
+//
+//	public void setClosedLoopControl(boolean b) {
+//		airpusher.setClosedLoopControl(b);
+//	}
+
+    public void reset() {
+//		setClosedLoopControl(true);
+//		startCompressor();
+		shiftHigh();
+	}
+
 
     /**
      * Gyro angle in degrees, relative to last resetGyro()
@@ -201,6 +219,10 @@ public class DriveLine extends Subsystem implements IActuate {
         state.shiftMode = ShiftMode.LOW;
     }
 
+    public void shiftOff() {
+        state.shiftMode = ShiftMode.OFF;
+    }
+
     public void arcadeDrive(double magnitude, double curve, boolean squaredInputs) {
         state.driveMode = DriveMode.ARCADE;
         state.magnitudeOrLeft = magnitude;
@@ -216,7 +238,8 @@ public class DriveLine extends Subsystem implements IActuate {
     }
 
     public void stop() {
-    	differentialDrive.tankDrive(0, 0);
+        differentialDrive.tankDrive(0, 0);
+        shiftOff();
     }
 
     public void turn(Constants.RotationDirection direction, double speed) {
@@ -270,9 +293,14 @@ public class DriveLine extends Subsystem implements IActuate {
         // if shifting, shift
         if (state.shiftMode == ShiftMode.HIGH) {
             // ensure shift is high
+            this.doubleSolenoid.set(DoubleSolenoid.Value.kForward);
+        }
+        else if (state.shiftMode == ShiftMode.LOW) {
+            // ensure shift is low
+            this.doubleSolenoid.set(DoubleSolenoid.Value.kReverse);
         }
         else {
-            // ensure shift is low
+            this.doubleSolenoid.set(DoubleSolenoid.Value.kOff);
         }
         // now drive based on mode
         if (state.driveMode == DriveMode.ARCADE) {
@@ -283,8 +311,9 @@ public class DriveLine extends Subsystem implements IActuate {
         }
     }
 
-    public static enum ShiftMode { HIGH, LOW };
-    public static enum DriveMode { TANK, ARCADE };
+    /////////////////////// Embedded Classes and Enums /////////////////////
+    public enum ShiftMode { HIGH, LOW, OFF }
+    public enum DriveMode { TANK, ARCADE }
 
     /**
      * This is the state of the subsystem
@@ -297,9 +326,7 @@ public class DriveLine extends Subsystem implements IActuate {
         double curveOrRight = 0.0;
         boolean squaredInputs = false;
 
-        public State() {
-
-        }
+        public State() { }
 
         public State(ShiftMode sm, DriveMode dm, double leftOrMag, double rightOrCurve, boolean sq) {
             this();

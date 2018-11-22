@@ -3,6 +3,8 @@ plugins {
     id "edu.wpi.first.GradleRIO" version "2019.0.0-alpha-3"
 }
 
+apply plugin: 'idea'
+
 repositories {
     mavenLocal()
     jcenter()

@@ -645,3 +645,12 @@ So:
 			this.w; // OK
 		}
 	}
+
+## Actuator/Subsystem design - setState and actuate()
+
+In order to facilitate record-and-playback, we've separate actuation into two phases:
+
+1. Each subsystem has a setState() method, and convenience methods that set what the outputs for the actuators _should_ be.
+2. the actuate() method, called at the end of the loop, actually sets the output on the actuators.
+
+This allows the actuator states to be recorded in each loop (see Robot.actuate())

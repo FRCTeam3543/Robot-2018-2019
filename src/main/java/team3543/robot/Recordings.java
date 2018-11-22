@@ -47,29 +47,16 @@ public class Recordings {
 
     public static RecordingChooser chooser() {
         RecordingChooser chooser = new RecordingChooser();
-        chooser.addDefault("EMPTY", ScriptSource.fromJSONString(RECORDINGS.get("EMPTY")));
+        chooser.addDefault("EMPTY", RobotScript.ScriptSource.fromJSONString(RECORDINGS.get("EMPTY")));
         for (String s : RECORDINGS.keySet()) {
-            chooser.addObject(s, ScriptSource.fromJSONString(RECORDINGS.get(s)));
+            chooser.addObject(s, RobotScript.ScriptSource.fromJSONString(RECORDINGS.get(s)));
         }
         return chooser;
     }
 
-    public static class RecordingChooser extends SendableChooser<ScriptSource> {
+    public static class RecordingChooser extends SendableChooser<RobotScript.ScriptSource> {
         public RecordingChooser() {
             super();
-        }
-    }
-
-    interface ScriptSource {
-        RobotScript getScript();
-
-        public static ScriptSource fromJSONString(final String s) {
-            return new ScriptSource() {
-                @Override
-                public RobotScript getScript() {
-                    return RobotScript.fromJSON(s);
-                }
-            };
         }
     }
 }

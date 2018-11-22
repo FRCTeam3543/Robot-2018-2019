@@ -7,7 +7,6 @@ package team3543.robot;
  * makes it not extensible.
  *
  * @author mk
- *
  */
 final public class Config {
 
@@ -67,10 +66,10 @@ final public class Config {
 	//////////////// Field geometry, from 2018 Game Manual
 	// Should all be public static final double
 	public static final double FIELD_TAPE_WIDTH				= Geometry.in_to_m(2);		// m
-	public static final double FIELD_AUTO_LINE_DISTANCE		= 3.05;				// m
-	public static final double FIELD_LENGTH 				= 16.46; 			// m
-	public static final double FIELD_WIDTH 					= 8.23;	 			// m
-	public static final double FIELD_CENTERLINE				= FIELD_LENGTH / 2;	// m
+	public static final double FIELD_AUTO_LINE_DISTANCE		= 3.05;						// m
+	public static final double FIELD_LENGTH 				= 16.46; 					// m
+	public static final double FIELD_WIDTH 					= 8.23;	 					// m
+	public static final double FIELD_CENTERLINE				= FIELD_LENGTH / 2;			// m
 
 	public static final double FIELD_NULL_TERRITORY_LENGTH 	= 1.83; 			// m
 	public static final double FIELD_NULL_TERRITORY_WIDTH 	= 2.42;				// m

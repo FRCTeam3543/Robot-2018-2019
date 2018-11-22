@@ -1,9 +1,7 @@
 package team3543.robot;
 
-import team3543.robot.Robot;
-
 /**
- * This interface shows some example 
+ * This interface shows some example
  * @author mk
  *
  */

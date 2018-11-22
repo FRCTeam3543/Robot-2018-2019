@@ -14,10 +14,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  */
 public class OI {
 
-    public static final String NETWORK_TABLE = "recording";
-    public static final String RECORD_SAVE_CHANNEL = "saveFromBot";
-    public static final String RECORD_LOAD_CHANNEL = "loadToBot";
-
 	final Robot robot;    // we need a reference to the robot
 
 	DriveLine.DriveMode driveMode = DriveLine.DriveMode.ARCADE;
@@ -40,7 +36,7 @@ public class OI {
 
     public OI(Robot robot) {
     	this.robot = robot;
-//    	networkTable = NetworkTableInstance.getDefault().getTable(NETWORK_TABLE);
+//    	networkTable = NetworkTableInstance.getDefault().getTable(Recordings.NETWORK_TABLE);
     	initJoysticks(DEFAULT_LEFT_JOYSTICK_PORT, DEFAULT_RIGHT_JOYSTICK_PORT);
     	recordingChooser = Recordings.chooser();
     }
@@ -117,7 +113,7 @@ public class OI {
 			SmartDashboard.putString("Record", "Stopped");
 			robot.recorder.dumpRecording(); // will write it to the console
             // TODO - will this be too much data for a String field?  Can we make the text box big?
-			SmartDashboard.putString(RECORD_SAVE_CHANNEL, robot.recorder.getScript().toJSON());
+			SmartDashboard.putString(Recordings.RECORD_SAVE_CHANNEL, robot.recorder.getScript().toJSON());
 		}
 	}
 

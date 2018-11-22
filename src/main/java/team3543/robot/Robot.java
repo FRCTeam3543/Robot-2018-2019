@@ -150,7 +150,7 @@ public class Robot extends TimedRobot {
     public State getState() {
         State state = new State();
         // we add copies of the state
-        state.driveLineState = this.driveLine.state.copy();
+        state.driveLine = this.driveLine.state.copy();
 //        state.clawState = this.claw.state.copy();
         return state;
     }
@@ -162,7 +162,7 @@ public class Robot extends TimedRobot {
      */
     public void setState(State state) {
         // if you add new subsystems, you need to add their states here
-        this.driveLine.state = state.driveLineState;
+        this.driveLine.state = state.driveLine;
 //        this.claw.state = state.clawState;
     }
 
@@ -176,7 +176,7 @@ public class Robot extends TimedRobot {
      */
     public static class State {
         // You need a state object here for each subsystem
-        public DriveLine.State driveLineState = new DriveLine.State();
+        public DriveLine.State driveLine = new DriveLine.State();
 //        Claw.State clawState = new Claw.State();
     }
 

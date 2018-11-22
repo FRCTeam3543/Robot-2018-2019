@@ -51,5 +51,14 @@ public class RobotScript extends ArrayList<Robot.State> {
                 }
             };
         }
+
+        public static ScriptSource wrap(final RobotScript script) {
+            return new ScriptSource() {
+                @Override
+                public RobotScript getScript() {
+                    return script;
+                }
+            };
+        }
     }
 }

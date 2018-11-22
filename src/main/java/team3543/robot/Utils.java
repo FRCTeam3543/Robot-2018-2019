@@ -24,5 +24,4 @@ public class Utils {
 		return clip(value, -1, 1);
 	}
 
-
 }

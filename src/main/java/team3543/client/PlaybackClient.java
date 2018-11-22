@@ -1,7 +1,8 @@
 package team3543.client;
 
 import edu.wpi.first.networktables.*;
-import team3543.robot.OI;
+
+//import team3543.robot.Recordings;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -14,6 +15,10 @@ import java.nio.charset.StandardCharsets;
  *
  */
 public class PlaybackClient {
+	public static final String NETWORK_TABLE = "recording";
+    public static final String RECORD_SAVE_CHANNEL = "saveFromBot";
+    public static final String RECORD_LOAD_CHANNEL = "loadToBot";
+
     enum Mode { RECORD, PLAY }
 
     final NetworkTable networkTable;
@@ -59,14 +64,14 @@ public class PlaybackClient {
 
     PlaybackClient() {
         NetworkTableInstance inst = NetworkTableInstance.getDefault();
-        networkTable = inst.getTable(OI.NETWORK_TABLE);
+        networkTable = inst.getTable(NETWORK_TABLE);
         inst.startClientTeam(3543);
     }
 
     void record(OutputStream os) throws IOException {
         // open a stream for writing
         // now wait on the network table for an entry change
-        networkTable.addEntryListener(OI.RECORD_SAVE_CHANNEL, (table, key, entry, value, flags) -> {
+        networkTable.addEntryListener(RECORD_SAVE_CHANNEL, (table, key, entry, value, flags) -> {
             recording = value.getString();
             done = true;
         }, EntryListenerFlags.kNew | EntryListenerFlags.kUpdate );
@@ -92,6 +97,6 @@ public class PlaybackClient {
         }
         String json = new String(bos.toByteArray(), StandardCharsets.UTF_8);
         System.out.println("read: "+json);
-        networkTable.getEntry(OI.RECORD_LOAD_CHANNEL).setString(json);
+        networkTable.getEntry(RECORD_LOAD_CHANNEL).setString(json);
     }
 }

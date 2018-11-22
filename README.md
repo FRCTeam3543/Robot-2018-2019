@@ -153,18 +153,16 @@ Inside a class, the methods (functions) can only access (see) properties of the 
 ## How the Robot works
 
 To try to make things easier, the robot code is organized to look and feel a bit more like Arduino sketches.
+
 However the robot is likely more complicated.  So, the code is organized into a set of class files that work together:
 
 * `Robot.java` - the "main" robot class as defined as `ROBOT_CLASS` in `build.gradle`.  The robot instance holds references to all the subsystems, wiring, calibration and geometry.  The runtime environment makes an instance of this class when it starts up the robot.  This class should take care of configuring the robot and instantiating and storing its subsystems.
-* `Wiring.java` - contains wiring port values used by subsystems.  PUT ALL THE WIRING VALUES HERE DON'T SCATTER THEM THROUGOUT THE CODE.  It's instance is accessed as `robot.wiring`.
-* `Calibration.java` - contains calibration values used by subsystems. PUT ALL CALIBRATION VALUES HERE DON'T SCATTER THEM THROUGOUT THE CODE.  Access as `robot.calibration`.
-* `Geometry.java` - contains the field and robot geometry.  PUT ALL BOT AND FIELD GEOMETRY HERE DON'T SCATTER IT THROUGHOUT THE CODE.  **Also put conversion functions and geometry calculation functions here as public static methods**.  Access as `robot.geometry` for robot geometry. Access constants using Geometry.FIELD_CONSTANT_NAME.
+* `Config.java` - contains wiring port values, calibrations used by subsystems and geometry constants.  PUT ALL THE CONFI VALUES HERE DON'T SCATTER THEM THROUGOUT THE CODE.  Its instance is accessed as `robot.wiring`.
+* `Geometry.java` - contains some useful geometry functions.  **Put conversion functions and geometry calculation functions here as public static methods**.  Access as `robot.geometry` for robot geometry. Access constants using Geometry.FIELD_CONSTANT_NAME.
 * `Constants.java` - contains constants used elsewhere in the application BUT THAT ARE NOT WIRING OR CALIBRATION or GEOMETRY.
-* `DriveLine.java` - subsystem for the drive base used in 2016-2018 seasons (motors, encoders and gyro)
-* `Claw.java` - subsystem for the pneumatic claw used in the 2018 season, adapted for this year's code.
-* `OI.java` - describes the operator interface.  Add your custom code (dashboard buttons, etc.) in the `configure()` method.
-* `Teleop.java` - contains the `setup()` and 'loop()` code for teleop mode.
-* `Autonomous.java` - contains the `setup()` and 'loop()` code for autonomous mode.
+* `DriveLine.java` - subsystem for the drive base (motors, encoders, shifter solenoid and gyro)
+* `Claw.java` - subsystem for the pneumatic claw used in the 2018 season, left in as an example.
+* `OI.java` - describes the operator interface.  Add your custom code (dashboard buttons, etc.) in the `configure()` method.  **ANYTHING** used to control the bot manually should be programmed here.
 * `Utils.java` - contains various utility functions.
 
 ## Subsystems
@@ -190,14 +188,30 @@ This also makes it so you can swap out the doubleSolenoid for some other actuato
 
   // ... import statements
 
-  class MySubsystem extends Subsystem {
+  class MySubsystem extends Subsystem implements Actuated {
 	  Sensor mySensor; // whatevs...
+	  State state = new State();
+
 	  // constructor
 	  MySubsystem(Robot robot) {
 		  super();
 		  mySensor = new Sensor(robot.wiring.MY_SENSOR_PORT); // also whatevs...
 	  }
-	  // ... and implement
+
+	  // ... and implement an actuate() method that really does stuff
+	  public void actuate() {
+		  // put code that actually does stuff here with the state values
+		  someActuator.setOutput(state.someVar);
+	  }
+
+	  public void setState(State state) {
+		  this.state = state.copy();
+	  }
+
+	  // state class to store the settings for the actuators, etc.
+	  public static class State {
+		  public double someVar = 0;
+	  }
   }
 
 3. Add an instance of the subsystem to the `Robot.java` properties:
@@ -224,25 +238,25 @@ This also makes it so you can swap out the doubleSolenoid for some other actuato
 			}
 		}
 
-5. Create activities that use the subsystem in the `Autonomous` or `Teleop` classes (more on this below).
+5. In the `Robot.State` class, add a reference to the new subsystem's state
+6. In the `Robot.getState()` method, ensure you copy in the state from the new subsystem
+7. In the `Robot.actuate()` method, make sure you call `actuate()` on your new subsystem
 
 ## Wiring and calibrating the Robot
 
-All the robot wiring (port numbers) should go into `Wiring.java`.  When you create a new subsystem,
-you should add values for all its ports here, as `int` properties.  This puts all the ports and such in one place, instead
+All the robot wiring (port numbers) should go into `Config.java`.  When you create a new subsystem, you should add values for all its ports here, as ``public static final int` properties.  This puts all the ports and such in one place, instead
 of having them scattered throughout the class files.  Then, if we wire things to different ports,
-we only have to fix them in one place.  The wiring is assigned to the `wiring` property of your
-`Robot` instance, so you can access it when setting up a subsystem.
+we only have to fix them in one place.
 
-The same goes for calibration constants, which should all go into `Calibration.java` and is access as the `calibration` property of the
-`Robot` instance.  This class stores `double` type properties for things like distance-per-pulse for encoders or sensitivity for gyros.
+The same goes for calibration constants, which should also all go into `Config.java` as `public static final double` type properties for things like distance-per-pulse for encoders or sensitivity for gyros.
 This is a useful idiom because the person performing calibration can do it all in one place.
 
-	// Wiring.java
-	class Wiring {
+	// Config.java
+	class Config {
 		...
-		final int LIFT_MOTOR_PORT = 2;	// lift motor is in port #2
+		public static final int LIFT_MOTOR_PORT = 2;	// lift motor is in port #2
 		...
+		public static final double LIFT_MOTOR_DISTANCE_PER_PULSE = 0.0284;
 	}
 
 	// Lift.java
@@ -250,10 +264,10 @@ This is a useful idiom because the person performing calibration can do it all i
 		Victor motor;
 
 		// Constructor
-		Lift(Robot robot) {
+		Lift() {
 			super("Lift"); // call superclass constructor
-			motor = new Victor(robot.wiring.LIFT_MOTOR_PORT); // define this in Wiring.java
-			motor.setDistancePerPulse(robot.calibration.LIFT_MOTOR_DISTANCE_PER_PULSE); // define this in Calibration.java
+			motor = new Victor(Config.LIFT_MOTOR_PORT);
+			motor.setDistancePerPulse(Config.LIFT_MOTOR_DISTANCE_PER_PULSE);
 			... etc
 		}
 	}
@@ -278,41 +292,20 @@ and while it is running, `robot.teleopPeriodic()` is called _every cycle_.
 
 If the robot is disabled, `robot.disabledinit()` is called _once_.
 
-## How to program the Robot
+## Record and playback
 
-### Making things Arduino-like.
+The `OI` and `Recorder` classes define mechanisms for recording and playing back robot activities.  We
+can use this to record autonomous mode.  We had some success with this in 2018, using recorded paths for our autonomous mode.  This year, with better repeatability in our driveline and actuators, we should be able to improve upon this functionality.  Other improvements will help us more quickly create and store new recordings.
 
-To make programming the Robot closer to Arduino programming from class (even though one is C and the
-other is Java!) we've made two _Run mode_ classes, `Teleop.java` and `Autonomous.java`.  They look sort-of
-like arduino sketches, wrapped in Java class syntax.  When constructed, the `Robot` creates an instance of `Autonomous` assigned to
-the `robot.autononomous`, and an instance of `Teleop` assigned to `robot.teleop`. The `robot` is stored as a
-property of each when they are constructed, so both classes can easily access subsystems of the robot.
+Here's how it works:
 
-Each run mode class has a `setup()` method, that is called
-_once_ by the robot when that mode is started, and each has a `loop()` method that is called _every cycle_
-when the robot is running in that mode.
+* we design our subsystems so that output to actuators is done in two steps instead of one: first, we write to a `State` object managed by the subsystem, that stores what all the outputs for that subsystem's actuators (or controllers) should be set to.  Next, at the end of the periodic loop, we call `actuate()` on each subsystem to really write the output to the actuators.
+* by doing actuation in two steps, we can attach a `record()` operation to the periodic loop, and serialize the output state to some external data structure.  The time series of output states is called a `RobotScript`, and can be serialized to and from an external `JSON` representation.
+* we can also attach a `playback()` operation to the periodic loop, that can be used to feed states from a de-serialized output script back into the bot, _replaying_ those output states.
+* Unlike the 2018 season, this year we can record and play back the entire robot output, not just the DriveLine.  Also, both playback and recording can be paused.
+* see `Config.java` for which buttons on the left joystick control record, playback and reset.
 
-That is:
-
-`robot.teleopInit()` calls `robot.teleop.setup()` just like an Arduino sketch would.
-`robot.teleopPeriodic()` calls `robot.teleop.loop()` just like an Arduino sketch would.
-
-`robot.autonomousInit()` calls `robot.autonomous.setup()` just like an Arduino sketch would.
-`robot.autonomousPeriodic()` calls `robot.autonomous.loop()` just like an Arduino sketch would.
-
-So, to program autonomous mode, add your setup-once code to the `setup()` method of `Autonomous.java`,
-and your every-time code to the `loop()` method.  Do the same for teleop mode, only in `Teleop.java`.
-
-### Adding a subsystem
-
-If you need a new Subsystem (call it Foo):
-
-1. Create a `Foo.java` class file for it, following `DriveLine.java` or `Claw.java` as an example of how to code the class.
-2. Add it as a property to `Robot.java` (use the driveLine as an example `Foo foo;`)
-3. Initialize the property in the `Robot()` constructor in `Robot.java` by calling its constructor (`foo = new Foo(this);`) (**!!** inside a method in a class, `this` means "me")
-4. Use your new subsystem in the `loop()` method of `Teleop` or `Autonomous`, or in an `Activity` (more on this next)
-
-### Activity programming
+## Activity programming
 
 Designing a robot to perform a complex task is like solving any complex task: break down the task into a series of
 steps.  Break those down further into a series of steps.  Keep doing this until the individual steps are simple and easy to solve.
@@ -645,3 +638,12 @@ So:
 			this.w; // OK
 		}
 	}
+
+## Actuator/Subsystem design - setState and actuate()
+
+In order to facilitate record-and-playback, we've separate actuation into two phases:
+
+1. Each subsystem has a setState() method, and convenience methods that set what the outputs for the actuators _should_ be.
+2. the actuate() method, called at the end of the loop, actually sets the output on the actuators.
+
+This allows the actuator states to be recorded in each loop (see Robot.actuate())

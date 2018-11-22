@@ -1,10 +1,8 @@
 package team3543.robot;
 
-import java.io.*;
 import java.util.logging.Logger;
 
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.command.Subsystem;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -24,9 +22,6 @@ public class Robot extends TimedRobot {
     ////////////////// Subsystems
     final DriveLine driveLine;		    // manages driveline sensors and acutators
 //    Claw claw;
-
-    // Run modes
-    Autonomous autonomous = null;		// handles autonomous part of the game
 
     /**
      * Constructor
@@ -58,17 +53,7 @@ public class Robot extends TimedRobot {
      */
     @Override
     public void disabledInit() {
-        recorder.stopPlayback();
-        if (autonomous != null) autonomous.cancel();
     	stopAll();
-    }
-
-    /**
-     * This method is called periodically when disabled.  Probably can stay empty.
-     */
-    @Override
-    public void disabledPeriodic() {
-    	// periodic code for disabled mode should go here
     }
 
     /**
@@ -78,14 +63,12 @@ public class Robot extends TimedRobot {
      */
     @Override
     public void autonomousInit() {
-        autonomous.setup();
         recorder.setScript(oi.getAutonomousScript());
         recorder.startPlayback();
     }
 
     /**
      * This function is called periodically during autonomous mode
-     *
      */
     @Override
     public void autonomousPeriodic() {
@@ -93,9 +76,6 @@ public class Robot extends TimedRobot {
         // perform playback, if there is a script
         // Scheduler.getInstance().run();
         recorder.playback();
-        if (autonomous != null) {
-            autonomous.loop();
-        }
         // note - we don't record in autonomous mode
         // Updating subsystems only writes state.  To actually make the robot do/move, call actuate()
         actuate();
@@ -107,12 +87,6 @@ public class Robot extends TimedRobot {
         // teleop starts running. If you want the autonomous to
         // continue until interrupted by another command, remove
         // this line or comment it out.
-    	if (autonomous != null) {
-    		autonomous.cancel();
-        }
-        if (recorder.playingBack) {
-            recorder.stopPlayback();    // whatever we are doing, stop playback
-        }
         stopAll();
     }
 
@@ -133,18 +107,19 @@ public class Robot extends TimedRobot {
      * Call this to stop anything the bot is doing
      */
     void stopAll() {
+        // if recording or playing back, stop it
+        recorder.stopPlayback();
+        recorder.stopRecording();
         driveLine.stop();
+        actuate();
+        // claw.off();
     }
 
     /**
      * Call this to reset the bot
      */
     void resetTheBot() {
-        recorder.stopPlayback();
-        recorder.resetRecording();
-        driveLine.stop();
-//        claw.open();
-        actuate();
+        stopAll();
     }
 
     /**
@@ -180,6 +155,11 @@ public class Robot extends TimedRobot {
         return state;
     }
 
+    /**
+     * Set the robot state
+     *
+     * This will cascade-set the states of all the actuators.
+     */
     public void setState(State state) {
         // if you add new subsystems, you need to add their states here
         this.driveLine.state = state.driveLineState;
@@ -187,17 +167,14 @@ public class Robot extends TimedRobot {
     }
 
     /**
-     * Require all subsystems in the command provided. This can be used by commands that need them all.
+     * Describes Robot state.  This is used for recording and playback.
+     *
+     * Every subsystem involved in record/playback should have its own
+     * State class, and an instance should be referenced here.  Record/playback
+     * serializes this state to JSON every loop to make a recording, and a
+     * deserialized instance is fed to the robot each loop during playback.
      */
-    public Subsystem[] getAllSubsystems() {
-        return new Subsystem[] {
-            driveLine
-//            ,claw
-        };
-    }
-
     public static class State {
-        // You need a state object here for each subsystem
         // You need a state object here for each subsystem
         public DriveLine.State driveLineState = new DriveLine.State();
 //        Claw.State clawState = new Claw.State();

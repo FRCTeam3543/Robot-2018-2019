@@ -22,8 +22,6 @@ import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 
-import java.io.Serializable;
-
 /**
  * Drive line subsystem
  *
@@ -34,8 +32,6 @@ import java.io.Serializable;
  *
  */
 public class DriveLine extends Subsystem implements Actuated {
-
-    Robot robot;
 
     /////// This stores the state.  All the motive routines write to this, then
     // the actuate() method is called by the Robot at end-of-loop, and we "really"
@@ -136,7 +132,6 @@ public class DriveLine extends Subsystem implements Actuated {
 //		airpusher.stop();
 //	}
 
-
     @Override
     public void initDefaultCommand() {
 
@@ -168,7 +163,6 @@ public class DriveLine extends Subsystem implements Actuated {
 //		startCompressor();
 		shiftHigh();
 	}
-
 
     /**
      * Gyro angle in degrees, relative to last resetGyro()

@@ -33,4 +33,23 @@ public class RobotScript extends ArrayList<Robot.State> {
             throw new RuntimeException(e); // also should not happen
         }
     }
+
+    /**
+     * Interface to wrap a source of a RobotScript
+     *
+     * This is used mainly to convert JSON-string-based scripts to RobotScript instances,
+     * such as from a Chooser.
+     */
+    interface ScriptSource {
+        RobotScript getScript();
+
+        public static ScriptSource fromJSONString(final String s) {
+            return new ScriptSource() {
+                @Override
+                public RobotScript getScript() {
+                    return RobotScript.fromJSON(s);
+                }
+            };
+        }
+    }
 }

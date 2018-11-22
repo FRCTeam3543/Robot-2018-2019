@@ -23,9 +23,6 @@ public class Robot extends TimedRobot {
     final DriveLine driveLine;		    // manages driveline sensors and acutators
 //    Claw claw;
 
-    // Run modes
-    Autonomous autonomous = null;		// handles autonomous part of the game
-
     /**
      * Constructor
      */
@@ -56,7 +53,6 @@ public class Robot extends TimedRobot {
      */
     @Override
     public void disabledInit() {
-        if (autonomous != null) autonomous.cancel();
     	stopAll();
     }
 
@@ -67,7 +63,6 @@ public class Robot extends TimedRobot {
      */
     @Override
     public void autonomousInit() {
-        autonomous.setup();
         recorder.setScript(oi.getAutonomousScript());
         recorder.startPlayback();
     }
@@ -81,9 +76,6 @@ public class Robot extends TimedRobot {
         // perform playback, if there is a script
         // Scheduler.getInstance().run();
         recorder.playback();
-        if (autonomous != null) {
-            autonomous.loop();
-        }
         // note - we don't record in autonomous mode
         // Updating subsystems only writes state.  To actually make the robot do/move, call actuate()
         actuate();
@@ -95,9 +87,6 @@ public class Robot extends TimedRobot {
         // teleop starts running. If you want the autonomous to
         // continue until interrupted by another command, remove
         // this line or comment it out.
-    	if (autonomous != null) {
-    		autonomous.cancel();
-        }
         stopAll();
     }
 
